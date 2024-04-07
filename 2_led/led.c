@@ -23,7 +23,27 @@ static void __iomem *SW_PAD_GPIO1_IO03;
 static void __iomem *GPIO1_GDIR;
 static void __iomem *GPIO1_DR;
 
+#define LEDOFF      0       /* OPEN  */
+#define LEDON       1       /* CLOSE */
 
+/* LED Switch Function */
+static void led_switch(u8 state)
+{
+    u32 value = 0;
+
+    if(state == LEDON)
+    {
+        val = readl(GPIO1_DR);
+        val &= ~(1 << 3);             /* LED ON LED */
+        writel(val, GPIO1_DR);
+    }
+    else if(state == LEDOFF)
+    {
+        val = readl(GPIO1_DR);
+        val |= (1 << 3);              /* LED OFF LED */
+        writel(val, GPIO1_DR);
+    }
+}
 
 static int led_open(struct inode *inode, struct file *filp)
 {
@@ -37,6 +57,19 @@ static int led_release(struct inode *inode, struct file *filp)
 
 static ssize_t led_write(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
 {
+    int retvalue;
+    unsigned char databuf[1];
+
+    retvalue = copy_from_user(databuf, buf, count);
+    if(retvalue < 0)
+    {
+        printk("Kernel Write Failed \r\n");
+        return -EFAULT;
+    }
+
+    /* ON/OFF */
+    led_switch(databuf[0]);
+
     return 0;
 }
 
@@ -54,7 +87,7 @@ static const struct file_operations led_fops =
 static int  __init led_init(void)
 {
     int ret = 0;
-    int val = 0
+    unsigned int val = 0
     /* LED Initial (Memory Mapping )*/
     IMX6U_CCM_CCGR1     = ioremap(CCM_CCGR1_BASE, 4);
     SW_MUX_GPIO1_IO03   = ioremap(SW_MUX_GPIO1_IO03_BASE, 4);
@@ -96,7 +129,7 @@ static int  __init led_init(void)
 /* Exit */
 static void __exit led_exit(void)
 {
-    int val = 0;
+    unsigned int val = 0;
     val = readl(GPIO1_DR);
     val |= (1 << 3);                           /* Open LED by Default */
     writel(val, GPIO1_DR);
