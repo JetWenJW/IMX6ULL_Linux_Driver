@@ -2,9 +2,18 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/fs.h>
+#include <linux/slab.h>
+#include <linux/io.h>
+#include <linux/uaccess.h>
 
 #define CHARDEVBASE_MAJOR    200            /* Major Chaedevbase number */
 #define CHARDEVBASE_NAME     "chrdevbse"    /* Name of chaedevbase      */
+
+static char readbuffer[100];                /* Read Buffer              */
+static char writebuffer[100];               /* Write Buffer             */
+static char kerneldata = {"kelnel Data"};
+
+
 
 static int chardevbase_open(struct inode *inode, struct file *filp)
 {
@@ -20,13 +29,35 @@ static int chardevbase_release(struct inode *inode, struct file *filp)
 
 static ssize_t chardevbase_read(struct file *filp, __user char *buf, size_t count, loff_t *ppos)
 {
-    printk("chardevbase read\r\n");
+    int ret = 0;
+    //printk("chardevbase read\r\n");
+    memcpy(readbuffer, kerneldata, sizrof(kerneldata));
+    copy_to_user(buf, readbuffer, count);
+
+    if(ret == 0)
+    {
+        printk("Kernel Send Data OK!!\r\n");
+    }
+    else
+    {
+        printk("Kernel Send Data Fail!!\r\n");
+    }
     return 0;
 }
 
 static ssize_t chardevbase_write(struct file *filp, __user char *buf, size_t count, loff_t *ppos)
 {
-    printk("chardevbase Write\r\n");
+    int ret = 0;
+    //printk("chardevbase Write\r\n");
+    copy_from_user(writebuffer, buf, count);
+    if(ret == 0)
+    {
+        printk("Kernel Receive Data : %s\r\n", writebuffer);
+    }
+    else
+    {
+        printk("Kernel Receive Data Fail!!\r\n");
+    }
     return 0;
 }
 
