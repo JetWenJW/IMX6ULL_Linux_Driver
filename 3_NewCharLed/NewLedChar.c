@@ -131,7 +131,7 @@ static int __init newchrled_init(void)
     val &= ~(1 << 3);                           /* Open LED by Default */
     writel(val, GPIO1_DR);
 
-
+    newchrled.major = 0;                        /* Set as 0,registry  Device ID from system */
 
     /* 2.Registry Char Device */
     if(newchrled.major)
@@ -151,14 +151,19 @@ static int __init newchrled_init(void)
     if(ret < 0)
     {
         printk("Char Dev Region Error\r\n");
-        return -1;
+        goto fail_devid;
     }
     printk("newchrled major= %d, minor= %d\r\n", newchrled.major, newchrled.minor);
 
     /* 3.Registry Char Device */
     newchrled.cdev.owner = THIS_MODULE;
     cdev_init(&newchrled.cdev, &newchrled_fops);
+
     ret = cdev_add(&newchrled.cdev, newchrled.devid, NEWCHRLED_COUNT);
+    if(ret < 0)
+    {
+        goto fail_cdev;
+    }
 
     /* 
      * 4.Auto Make Device node (Plug And Play) 
@@ -167,7 +172,8 @@ static int __init newchrled_init(void)
     newchrled.class = class_create(THIS_MODULE, NEWCHRLED_NAME);
     if(IS_ERR(newchrled.class))
     {
-        return PTR_ERR(newchrled.class);
+        ret = PTR_ERR(newchrled.device);
+        goto fail_class;
     }
 
     /* 4.1Auto assigned Device */
@@ -175,12 +181,23 @@ static int __init newchrled_init(void)
                         newchrled.device, NULL, NEWCHRLED_NAME);
     if(IS_ERR(newchrled.device))
     {
-        return PTR_ERR(newchrled.device);
+        ret = PTR_ERR(newchrled.device);
+        goto fail_device;
     }
 
-
-
     return 0;
+/* The Order cannot change */
+fail_device :
+    class_destroy(newchrled.class);
+
+fail_class :
+    cdev_del(&newchrled.cdev);
+
+fail_cdev :
+    unregister_chrdev_region(newchrled.devid, NEWCHRLED_NAME);
+
+fail_devid :
+    return ret;
 }
 
 /* Exit Point */
