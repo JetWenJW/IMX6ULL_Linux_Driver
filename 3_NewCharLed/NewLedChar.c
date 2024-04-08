@@ -6,6 +6,7 @@
 #include <linux/io.h>
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
+#include <linux/device.h>
 
 #define NEWCHRLED_NAME      "newchrled"
 #define NEWCHRLED_COUNT     1         
@@ -32,6 +33,8 @@ struct newchrled_dev
 {
     struct cdev cdev;       /* Chr Device          */
     dev_t devid;            /* Device ID           */
+    struct class *class;    /* class               */
+    struct device *device;   /* Device              */
     int major;              /* Major Device Number */
     int minor;              /* Sub-Device Number   */
 };
@@ -60,11 +63,14 @@ static void led_switch(u8 state)
 
 static int newchrled_open(struct inode *inode, struct file *filp)
 {
+    /* Private Data */
+    filp -> private_data = &newchrled;
     return 0;
 }
 
 static int newchrled_release(struct inode *inode, struct file *filp)
 {
+    struct newchrled_dev *dev = (struct newchrled_dev *)filp -> private_data;
     return 0;
 }
 
@@ -153,15 +159,28 @@ static int __init newchrled_init(void)
     newchrled.cdev.owner = THIS_MODULE;
     cdev_init(&newchrled.cdev, &newchrled_fops);
     ret = cdev_add(&newchrled.cdev, newchrled.devid, NEWCHRLED_COUNT);
+
+    /* 
+     * 4.Auto Make Device node (Plug And Play) 
+     * Note: Class must be created earlier than Device
+     */
+    newchrled.class = class_create(THIS_MODULE, NEWCHRLED_NAME);
+    if(IS_ERR(newchrled.class))
+    {
+        return PTR_ERR(newchrled.class);
+    }
+
+    /* 4.1Auto assigned Device */
+    newchrled.device = device_create(newchrled.class, NULL, 
+                        newchrled.device, NULL, NEWCHRLED_NAME);
+    if(IS_ERR(newchrled.device))
+    {
+        return PTR_ERR(newchrled.device);
+    }
+
+
+
     return 0;
-
-    /* 4.Auto Make Device node (Plug And Play) */
-
-
-
-
-
-
 }
 
 /* Exit Point */
@@ -174,18 +193,26 @@ static void __exit newchrled_exit(void)
     val |= (1 << 3);                           /* Open LED by Default */
     writel(val, GPIO1_DR);
 
-    /* Cancel Memory Mapping */
+    /* 1.Cancel Memory Mapping */
     iounmap(CCM_CCGR1_BASE);
     iounmap(SW_MUX_GPIO1_IO03_BASE);
     iounmap(SW_PAD_GPIO1_IO03_BASE);
     iounmap(GPIO1_GDIR_BASE);
     iounmap(GPIO1_DR_BASE);    
 
-    /* Delete Char Device */
+    /* 2.Delete Char Device */
     cdev_del(&newchrled.cdev);
 
-    /* Unregistry Char Device */
+    /* 3.Unregistry Char Device */
     unregister_chrdev_region(newchrled.devid, NEWCHRLED_COUNT);
+
+    /* 
+     * 4.Destroy Device & Class 
+     * NOTE: Device must be destroied earlier than Clsss
+     */
+    device_destroy(newchrled.class, newchrled.device);
+    class_destroy(newchrled.class);
+
 }
 
 /* Rregister & Unregister */
