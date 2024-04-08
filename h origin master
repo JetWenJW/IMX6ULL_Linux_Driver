@@ -1,0 +1,83 @@
+[33mcommit c781fcfbbfc36a63c3be696520e10f7abb3d0a04[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Tue Apr 9 00:18:01 2024 +0800
+
+    Create LED Framework Via Device Tree
+
+[33mcommit bf74733b10b05f85ad6e37aaa129f4b220dd64f8[m[33m ([m[1;31morigin/master[m[33m)[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Mon Apr 8 16:26:29 2024 +0800
+
+    Add 4_dtsof & Use OF_ function to READ Property Node, Read Property Array, Read Property Number, Read Property String, Practice OF function od DeviceTree
+
+[33mcommit 5873d9250ceea1eb76a7d120d456ce186ace1470[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Mon Apr 8 11:45:56 2024 +0800
+
+    Accomplished Led_Driver & Replaced return syntax with goto syntex to dealing with Error ~
+
+[33mcommit b9e0a80f672febb21c9de0d3aa82d6bad44a432a[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Mon Apr 8 11:14:22 2024 +0800
+
+    Create Plug & Play Function/Driver
+
+[33mcommit d4cc823300d8892ca902b032ed5a4482297b48dd[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Mon Apr 8 10:43:32 2024 +0800
+
+    Add newchrled In order to Auto Creat Device ID
+
+[33mcommit 86aaba28aa289de655b25cd1395e36f0a8ecff14[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Mon Apr 8 01:27:11 2024 +0800
+
+    Remove some unused file !
+
+[33mcommit aa401088b396db51fa0c399172d6d2c7bd58ec3e[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Mon Apr 8 01:23:50 2024 +0800
+
+    Add ledAPP In order to Test led Driver & Both of them are passed~~~
+
+[33mcommit 19be88b2cda9e3110123691c61db32464175f9cc[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Mon Apr 8 00:45:58 2024 +0800
+
+    Add LED Driver by Linux
+
+[33mcommit 69acbbe0a64b164453663801369b4c567d89e302[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Sun Apr 7 16:16:33 2024 +0800
+
+    Remove unused files
+
+[33mcommit 7b7403c4e4f797c361112601a3110f5db5e8e9d6[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Sun Apr 7 16:14:48 2024 +0800
+
+    Accomplish chardevbase Driver & APP Test OK
+
+[33mcommit be151ca4e90b20e494c5b5d5af2e90cbad833c43[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Sun Apr 7 15:20:34 2024 +0800
+
+    Add chardevbaseAPP In order to test Driver(Open, Read, Write, Close)
+
+[33mcommit bceb4bb04e2d367ffb3780323e0df1f3edfd3593[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Sun Apr 7 12:33:43 2024 +0800
+
+    Build Linux Drivers Char Device Framework
+
+[33mcommit cae5a5dc007b8ba665a95a5cfedcff3f9af59fe3[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Sun Apr 7 11:53:18 2024 +0800
+
+    Add Some header files to use printk
+
+[33mcommit 952c1c500be1cc10379bbfada02fc380767002e0[m
+Author: JetWen <killer500k@gmail.com>
+Date:   Sun Apr 7 11:35:29 2024 +0800
+
+    Add Char Device of Linux_Drivers

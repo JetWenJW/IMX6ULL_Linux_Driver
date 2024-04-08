@@ -9,8 +9,8 @@
  * argc : Argument of APP
  * argv[] : char data type, body of Argument
  * ./ledAPP <filename> <0/OFF:1/ON>
- * ./ledAPP /dev/led 1 : LEDON
- * ./ledAPP /dev/led 0 : LEDOFF
+ * ./ledAPP /dev/dtsled 1 : LEDON
+ * ./ledAPP /dev/dtsled 0 : LEDOFF
  */
 
 #define LEDOFF  0
