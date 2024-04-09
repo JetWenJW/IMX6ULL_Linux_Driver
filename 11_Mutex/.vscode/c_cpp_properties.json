@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": 
+            [
+                "${workspaceFolder}/**",
+                "/home/ubuntu/SOC_UBOOT/linux-imx-rel_imx_4.1.15_2.1.0_ga/include",
+                "/home/ubuntu/SOC_UBOOT/linux-imx-rel_imx_4.1.15_2.1.0_ga/arch/arm/include",
+                "/home/ubuntu/SOC_UBOOT/linux-imx-rel_imx_4.1.15_2.1.0_ga/arch/arm/include/generated"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
