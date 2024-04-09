@@ -42,21 +42,23 @@ struct gpioled_dev gpioled; /*  struct Declare*/
 
 static int led_open(struct inode *inode, struct file *filp)
 {
-
+    unsigned long irqflag;          /* For SpinLock in Interrupt Mode */
     filp -> private_data = &gpioled;
     /* Locked */
-    spin_lock(&gpioled.lock);
+    //spin_lock(&gpioled.lock);
+    spin_lock_irqsave(&gpioled.lock, irqflag);          /* Lock SpinLock in Interrupt Mode */
 
     /* Data Protection */
     if(gpioled.lock)              /* Not allow to access */
     {
         spin_unlock(&gpioled.lock);
-        return -EINVAL;
+        return -EBUSY;
     }
     gpioled.lock++;               /* Has Already used    */
 
     /* Unlock */
-    spin_unlock(&gpioled.lock);
+    //spin_unlock(&gpioled.lock);
+    spin_unlock_irqstore(&gpioled.lock, irqflag);       /* Unlock SpinLock in Interrupt Mode */
 
     return 0;
 }
@@ -65,8 +67,10 @@ static int led_release(struct inode *inode, struct file *filp)
 {
     struct gpioled_dev *dev = (struct gpioled_dev *)filp -> private_data;
     
+    unsigned long irqflag;          /* For SpinLock in Interrupt Mode */
     /* Locked */
-    spin_lock(&dev -> lock);
+    //spin_lock(&dev -> lock);
+    spin_lock_irqsave(&dev -> lock, irqflag);          /* Lock SpinLock in Interrupt Mode */
 
     if(dev -> lock)
     {
@@ -74,7 +78,9 @@ static int led_release(struct inode *inode, struct file *filp)
     }
 
     /* Unlock */
-    spin_unlock(&dev -> lock);
+    //spin_unlock(&dev -> lock);
+    spin_unlock_irqstore(&dev -> lock, irqflag);       /* Unlock SpinLock in Interrupt Mode */
+
 
     return 0;
 }
