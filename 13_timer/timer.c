@@ -15,12 +15,21 @@
 #include <linux/timer.h>
 #include <linux/jiffies.h>
 
+/*
+ * Learn How to Use IO_ctl Function
+ * And Learn Define IO Command
+ * 
+ */
+
+
+
 
 #define TIMER_CNT     1
 #define TIMER_NAME    "timer"
 
-#define timer_0_VALUE     0xF0         
-#define INVAtimer         0x00      
+#define CLOSE_CMD       _IO(0xEF, 1)            /* Close command */
+#define OPEN_CMD        _IO(0xEF, 2)            /* Open Command  */
+#define SETPERIOD_CMD   _IOW(0xEF, 3, int)      /* Set Period    */
 
 struct timer_dev 
 {
@@ -33,6 +42,7 @@ struct timer_dev
     struct device_node *nd; /* Device Node         */
     struct timer_list tmr;  /* For Software Timer  */
     int led_gpio;           /* For IO Number       */
+    int timerperiod;        /* For Timer Period(ms)*/
 };
 
 struct timer_dev timer; /*  struct Declare */
@@ -49,43 +59,43 @@ static int timer_release(struct inode *inode, struct file *filp)
     return 0;
 }
 
-static ssize_t timer_write(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
+static long timer_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-    int ret = 0;
-   
-    return ret;
-}
-
-static ssize_t timer_read(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
-{
+    struct timer_dev *dev = (struct timer_dev *)filp -> private_data;/* Set Permission */
     int ret = 0;
     int value = 0;
-    struct timer_dev *dev = (struct timer_dev *)filp -> private_data;
-
-    if(gpio_get_value(dev -> timer_gpio) == 0)        /* Press timer           */
+    switch(cmd)
     {
-        while(!gpio_get_value(dev -> timer_gpio));    /* Wait to release timer */
-        atomic_set(&dev -> timervalue, timer_0_VALUE);
-    }
-    else
-    {
-        atomic_set(&dev -> timervalue, INVAtimer);
-    }
-    
-    value = atomic_read(&dev -> timervalue);
-    ret = copy_to_user(buf, &value, sizeof(value));
+        case CLOSE_CMD : 
+            del_timer_sync(& dev -> timer);/* Delete Timer */
+            break;
 
+        case OPEN_CMD : 
+            /* Restart Timer, it'll call this function when timer expired */
+            mod_timer(&dev -> timer, jiffies + msecs_to_jiffies(dev->timerperiod));
+            break;
 
+        case SETPERIOD_CMD : 
+            ret = copy_from_user(&value, (int *)arg, sizeof(int));
+            if(ret < 0)
+            {
+                return -EFAULT;
+            }
+            dev->timerperiod = value;
+            mod_timer(&dev -> timer, jiffies + msecs_to_jiffies(dev->timerperiod));
+            break;
+    }
     return ret;
 }
+
+
 /* Chrdev Operations */
 static const struct file_operations timer_fops =
 {
-    .owner   = THIS_MODULE,               /* The owner of This file */
-    .open    = timer_open,                /* Device Open file       */
-    .release = timer_release,             /* Device Close file      */
-    .write   = timer_write,               /* Device Write file      */
-    .read    = timer_read                 /* Device Read File       */
+    .owner          = THIS_MODULE,               /* The owner of This file */
+    .open           = timer_open,                /* Device Open file       */
+    .release        = timer_release,             /* Device Close file      */
+    .unlocked_ioctl = timer_ioctl
 };
 
 /* 
@@ -101,7 +111,7 @@ static void timer_func(unsigned long arg)
     gpio_set_value(dev -> led_gpio, stat);
 
     /* Restart Timer, it'll call this function when timer expired */
-    mod_timer(&dev -> timer, jiffies + msecs_to_jiffies(500));
+    mod_timer(&dev -> timer, jiffies + msecs_to_jiffies(dev->timerperiod));
 }
 
 /* LED IO Initial */
@@ -219,8 +229,10 @@ static int __init timer_init(void)
     {
         goto fail_led_init;
     }
-    init_timer(&timer.tmr);
 
+
+    init_timer(&timer.tmr);
+    timer.timerperiod = 500;                                    /* Initial Period 500ms */
     timer.tmr.function = timer_func;
     timer.tmr.expires = jiffies + msecs_to_jiffies(500);        /* 500ms Timer Expires */
     timer.tmr.data = (unsigned long)&timer;                     /* Set Parameter       */

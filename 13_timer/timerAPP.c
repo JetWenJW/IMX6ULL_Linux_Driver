@@ -5,25 +5,29 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
+
 /*
  * argc : Argument of APP
  * argv[] : char data type, body of Argument
- * ./keyAPP <filename> <0/OFF:1/ON>
- * ./keyAPP /dev/key
+ * ./timerAPP <filename> 
+ * ./timerAPP /dev/timer
  */
 
 
-#define KEY_0_VALUE     0xF0         
-#define INVAKEY         0x00      
+#define CLOSE_CMD       _IO(0xEF, 1)           /* Close command */
+#define OPEN_CMD        _IO(0xEF, 2)           /* Open Command  */
+#define SETPERIOD_CMD   _IOW(0xEF, 3, int)     /* Set Period    */ 
 
 /* MAIN Function */
 int main(int argc, char *argv[])
 {
-    int fd, retvalue;
+    int fd, ret = 0;
     char *filename;
     unsigned char databuffer[1];
-    int value;
-
+    unsigned int cmd;
+    unsigned int arg;
+    unsigned char str[100];
     if(argc != 2)
     {
         printf("Error Usage!\r\n");
@@ -43,10 +47,30 @@ int main(int argc, char *argv[])
     /* Read KEY Value */
     while(1)
     {
-        read(fd, &value, sizeof(value));
-        if(value == KEY_0_VALUE)
+        printf("Input CMD :");
+        ret = scanf("%d", &cmd);
+        if(ret != 1)    /* In case of Reading fail */
         {
-            printf("KEY0 PRess, value = %d\r\n", value);
+            gets(str);
+        }
+
+        if(cmd == 1)            /* Close Timer */
+        {
+            ioctl(fd, CLOSE_CMD, &arg);
+        }
+        else if(cmd == 2)       /* Open Timer */
+        {
+            ioctl(fd, OPEN_CMD, &arg);
+        }
+        else if(cmd == 3)       /* Set Period */
+        {
+            printf("Input Timer Period:");
+            scanf("%d", &arg);
+            if(ret != 1)
+            {
+                gets(str);
+            }
+            ioctl(fd, SETPERIOD_CMD, &arg);
         }
     }
 
