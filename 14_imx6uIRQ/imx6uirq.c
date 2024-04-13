@@ -47,7 +47,13 @@ struct imx6uirq_dev
     struct device *device;                  /* For Device          */
     struct class *class;                    /* For class Function  */
     struct device_node *nd;                 /* Device Node         */
-    struct irq_keydesc irqkey[KEY_NUM];     /* ForInterrput        */
+    struct irq_keydesc irqkey[KEY_NUM];     /* For Interrput       */
+    struct timer_list timer;                /* For Key filter      */
+
+
+    atomic_t keyvalue;                      /* For Get Key Value   */
+    atomic_t releasekey;                    /* For Detect Release  */
+
 };
 
 struct imx6uirq_dev imx6uirq; /*  struct Declare */
@@ -74,19 +80,43 @@ static ssize_t imx6uirq_write(struct file *filp, const char __user *buf, size_t 
 static ssize_t imx6uirq_read(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
 {
     int ret = 0;
+    
+    unsigned char keyvalue;
+    unsigned char releasekey;
+    struct imx6uirq_dev *dev = filp->private_data;
+    
+    keyvalue    = atomic_read(&dev->keyvalue);
+    releasekey  = atomic_read(&dev->releasekey);
 
-
+    if(releasekey)/* Valid KEY */
+    {
+        if(keyvlaue & 0x80)
+        {
+            keyvalue &= ~(0x80);
+            ret = copy_to_user(buf, &keyvalue, sizeof(keyvalue));
+        }
+        else
+        {
+            goto data_error;
+        }
+        atomic_set(&dev->releasekey, 0);/* Clear Flags */
+    }
+    else
+    {
+        goto data_error;
+    }   
 
     return ret;
+
+data_error : 
+    return -EINVAL;
 }
 /* Chrdev Operations */
 static const struct file_operations imx6uirq_fops =
 {
     .owner   = THIS_MODULE,             /* The owner of This file */
-    .open    = imx6uirq_open,                /* Device Open file       */
-    //.release = imx6uirq_release,             /* Device Close file      */
-    //.write   = imx6uirq_write,               /* Device Write file      */
-    .read    = imx6uirq_read                 /* Device Read File       */
+    .open    = imx6uirq_open,           /* Device Open file       */
+    .read    = imx6uirq_read            /* Device Read File       */
 };
 
 
@@ -95,21 +125,33 @@ static irqreturn_t key0_handler(int irq, void *dev_id)
 {
     int value = 0;
     struct imx6uirq_dev *dev = dev_id;
+    /*
+     * This Part Only need to Enable Timer
+     * The Key Value for IRQ Handler to handle
+     */
+    dev->timer.data = (unsigned long)dev_id;
+    mod_timer(&dev->timer, jiffies + msecs_to_jiffies(20)); /* 20 ms delay as filter */
+
+    return IRQ_HANDLED;
+}
+
+/* Timer Handler  */
+static void timer_func(unsigned long arg)
+{
+    int value = 0;
+    struct imx6uirq_dev *dev = (struct imx6uirq_dev *)arg;
 
     value = gpio_get_value(dev->irqkey[0].gpio);
     if(value == 0)      /* Press KEY */
     {
-        printk("KEY0 Press~\r\n");
+        atomic_set(&dev->keyvalue, dev->irqkey[0].value);
     }
     else if(value == 1) /* Release KEY */
     {
-        printk("KEY0 Release~\r\n");
+        atomic_set(&dev->keyvalue, 0x80 | (dev->irqkey[0].value));
+        atomic_set(&dev->releasekey, 1);
     }
-    return IRQ_HANDLED;
 }
-
-
-
 
 /* key IO initial  */
 static int keyio_init(struct imx6uirq_dev *dev)
@@ -180,6 +222,10 @@ static int keyio_init(struct imx6uirq_dev *dev)
             goto fail_irq;
         }
     }
+
+    /* C. Initial Timer in order to Key filter */
+    init_timer(&imx6uirq.timer);
+    imx6uirq.timer.function = timer_func;
 
     return 0;
 
@@ -259,13 +305,17 @@ static int __init imx6uirq_init(void)
     }
 
 
-    /*IO Initial */
+    /* IO Initial */
     ret = keyio_init(&imx6uirq);
     if(ret < 0)
     {
         goto fail_keyinit;
     }
     
+    /* Initial atomic Operations' Value */
+    atomic_set(&imx6uirq.keyvalue, INVAKEY);
+    atomic_set(&imx6uirq.releasekey, 0);
+
     return 0;
 fail_keyinit :
 fail_device :
@@ -294,6 +344,9 @@ static void __exit imx6uirq_exit(void)
         gpio_free(imx6uirq.irqkey[i].gpio);    
     }
 
+    /* Delete Timer */
+    del_timer_sync(&imx6uirq.timer);
+
     /* imx6uirq OFF When we exit Module */
     gpio_set_value(imx6uirq.imx6uirq_gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
 
@@ -304,8 +357,6 @@ static void __exit imx6uirq_exit(void)
     /* Destroy Device => Class */
     device_destroy(imx6uirq.class, imx6uirq.devid);
     class_destroy(imx6uirq.classs);
-
-
 }
 
 

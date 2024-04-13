@@ -8,21 +8,17 @@
 /*
  * argc : Argument of APP
  * argv[] : char data type, body of Argument
- * ./keyAPP <filename> <0/OFF:1/ON>
- * ./keyAPP /dev/key
+ * ./imx6uirqAPP <filename> <0/OFF:1/ON>
+ * ./imx6uirqAPP /dev/imx6uirq
  */
 
-
-#define KEY_0_VALUE     0xF0         
-#define INVAKEY         0x00      
 
 /* MAIN Function */
 int main(int argc, char *argv[])
 {
-    int fd, retvalue;
+    int fd, ret;
     char *filename;
-    unsigned char databuffer[1];
-    int value;
+    unsigned char data;
 
     if(argc != 2)
     {
@@ -43,10 +39,17 @@ int main(int argc, char *argv[])
     /* Read KEY Value */
     while(1)
     {
-        read(fd, &value, sizeof(value));
-        if(value == KEY_0_VALUE)
+        ret = read(fd, &data, sizeof(data));
+        if(ret < 0)
         {
-            printf("KEY0 PRess, value = %d\r\n", value);
+
+        }
+        else
+        {
+            if(data)
+            {
+                printf("key value = %#X\r\n",data);
+            }
         }
     }
 
