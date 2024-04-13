@@ -1,5 +1,4 @@
 #include <linux/module.h>
-#include <linux/of_irq.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -13,22 +12,29 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/string.h>
+#include <linux/irq.h>
+#include <linux/of_irq.h>
+#include <linux/interrupt.h>
+#include <asm/mach/map.h>
+#include <asm/uaccess.h>
+#include <asm/io.h>
 
 
 #define IMX6UIRQ_CNT     1
 #define IMX6UIRQ_NAME    "imx6uirq"
 
 #define KEY_NUM          1
+#define KEY0VALUE        0x01
+#define INVAKEY          0xFF
 
 /* IRQ of Key Structure */
 struct irq_keydesc
 {
-    int gpio;                   /* IO NUmber        */
-    int irqnum;                 /* IRQ Number       */
-    unsigned char value;        /* Key Value        */
-    char name[10];              /* Interrupt name   */
-                                /* IRQ Handler      */
-
+    int gpio;                               /* IO NUmber        */
+    int irqnum;                             /* IRQ Number       */
+    unsigned char value;                    /* Key Value        */
+    char name[10];                          /* Interrupt name   */                                
+    irqreturn_t (*handler)(int, void *)     /* IRQ Handler      */
 };
 
 
@@ -84,6 +90,27 @@ static const struct file_operations imx6uirq_fops =
 };
 
 
+/* KEY_IRQ Handler */
+static irqreturn_t key0_handler(int irq, void *dev_id)
+{
+    int value = 0;
+    struct imx6uirq_dev *dev = dev_id;
+
+    value = gpio_get_value(dev->irqkey[0].gpio);
+    if(value == 0)      /* Press KEY */
+    {
+        printk("KEY0 Press~\r\n");
+    }
+    else if(value == 1) /* Release KEY */
+    {
+        printk("KEY0 Release~\r\n");
+    }
+    return IRQ_HANDLED;
+}
+
+
+
+
 /* key IO initial  */
 static int keyio_init(struct imx6uirq_dev *dev)
 {
@@ -111,10 +138,11 @@ static int keyio_init(struct imx6uirq_dev *dev)
     }
 
     /* A_3 Initial IO */
-    for(i = 0;i < KEY_NUM;i++)
+    for(i = 0;i < KEY_NUM;i++)/* Uss for loop Because we might have muiltiple Device */
     {
         memset(dev -> irqkey[1].name, 0, sizeof(dev->irqkey[1].name));
         sprintf(dev->irqkey[i].name, "KEY%d", i);
+
         ret = gpio_request(dev -> irqkey[1].gpio, dev->irqkey[i].name);
         if(ret)
         {
@@ -129,14 +157,38 @@ static int keyio_init(struct imx6uirq_dev *dev)
             ret = -EINVAL;
             goto fail_input;
         }
+
+        /* 1. Get IRQ Number */
+        dev->irqkey[1].irqnum = gpio_to_irq(dev->irqkey[i].gpio); /* Get IRQ Number */
+#if 0
+        dev->irqkey[i].irqnum = irq_of_parse_and_map(dev->nd, i);
+#endif
     }
 
+    dev->irqkey[0].handler  = key0_handler;
+    dev->irqkey[0].value    = KEY0VALUE;
+
+    /* B. Key Interrupt Innitial  */
+    for(i = 0;i < KEY_NUM;i++)
+    {
+        ret = request_irq(dev->irqkey[i].irqnum, dev->irqkey[i].handler, 
+                        IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+                        dev->irqkey[i].name, &imx6uirq);
+        if(ret)
+        {
+            printk("irq %d request failed\r\n", dev->irqkey[i].irqnum);
+            goto fail_irq;
+        }
+    }
 
     return 0;
 
-
+fail_irq : 
 fail_input :
-    gpio_free(dev->irqkey[i].gpio);
+    for(i = 0;i < KEY_NUM;i++)
+    {
+        gpio_free(dev->irqkey[i].gpio);    
+    }
 fail_request :
 fail_gpio :
 fail_nd :
@@ -209,8 +261,13 @@ static int __init imx6uirq_init(void)
 
     /*IO Initial */
     ret = keyio_init(&imx6uirq);
+    if(ret < 0)
+    {
+        goto fail_keyinit;
+    }
+    
     return 0;
-
+fail_keyinit :
 fail_device :
     class_destoy(imx6uirq.class);
 fail_class :
@@ -224,6 +281,19 @@ fail_devid :
 /* Exit Point Function */
 static void __exit imx6uirq_exit(void)
 {
+    int i = 0;
+    /* Relese Interrupt */
+    for(i = 0;i < KEY_NUM;i++)
+    {
+        free_irq(imx6uirq.irqkey[i].irqnum, &imx6uirq);
+    }
+
+    /* FREE IO */
+    for(i = 0;i < KEY_NUM;i++)
+    {
+        gpio_free(imx6uirq.irqkey[i].gpio);    
+    }
+
     /* imx6uirq OFF When we exit Module */
     gpio_set_value(imx6uirq.imx6uirq_gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
 
@@ -235,8 +305,7 @@ static void __exit imx6uirq_exit(void)
     device_destroy(imx6uirq.class, imx6uirq.devid);
     class_destroy(imx6uirq.classs);
 
-    /* FREE imx6uirq GPIO */
-    gpio_free(imx6uirq.imx6uirq_gpio);
+
 }
 
 
