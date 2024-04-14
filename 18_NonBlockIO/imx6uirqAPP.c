@@ -9,6 +9,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <poll.h>
 
 
 
@@ -24,8 +25,10 @@
 /* MAIN Function */
 int main(int argc, char *argv[])
 {
-    fd_set readfds;
-    struct timeval timeout;
+    //fd_set readfds;           /* For select finction */
+    //struct timeval timeout;   /* For select finction */
+    struct pollfd fds;          /* For poll Function   */
+
     int fd, ret;
     char *filename;
     unsigned char data;
@@ -45,7 +48,7 @@ int main(int argc, char *argv[])
         printf("File %s open fail\r\n", filename);
         return -1;
     }
-
+#if 0
     /* Read KEY Value */
     while(1)
     {
@@ -81,6 +84,76 @@ int main(int argc, char *argv[])
                 break;
         }
     }
+#endif
+
+    /* Read KEY Value */
+    while(1)
+    {
+
+        //ret = select(fd +1, &readfds, NULL, NULL, &timeout);
+        fds.fd = fd;
+        fds.events = POLLIN;
+
+        ret = poll(&fds, 1, 500);       /* timeout = 500 ms*/
+
+        if(ret == 0)    /* timeour */
+        {
+
+        }
+        else if(ret < 0)/* Error */
+        {
+
+        }
+        else            /* Readable */
+        {
+            if(fds.revents | POLLIN)
+            {
+                ret = read(fd, &data, sizeof(data));
+                if(ret < 0)
+                {
+
+                }
+                else
+                {
+                    if(data)
+                    {
+                        printf("key_value = %#X\r\n", data);
+                    }
+                } 
+            }
+        }
+#if 0
+        switch(ret)
+        {
+            case 0:     /* Timeout */
+                printf("select timeout!\r\n");
+                break;
+            case -1:     /* Error   */
+                break;
+            default :   /* Readable Data */
+                if(FD_ISSET(fd, &readfds))
+                {
+                    ret = read(fd, &data, sizeof(data));
+                    if(ret < 0)
+                    {
+
+                    }
+                    else
+                    {
+                        if(data)
+                        {
+                            printf("key_value = %#X\r\n", data);
+                        }
+                    }
+                }
+                break;
+        }
+#endif
+    }
+
+
+
+
 
     /* Everything Normal */
     close(fd);
