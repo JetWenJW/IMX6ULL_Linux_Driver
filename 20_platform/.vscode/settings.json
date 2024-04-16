@@ -3,6 +3,7 @@
         "slab.h": "c",
         "kernel.h": "c",
         "fs.h": "c",
-        "init.h": "c"
+        "init.h": "c",
+        "poll.h": "c"
     }
 }
