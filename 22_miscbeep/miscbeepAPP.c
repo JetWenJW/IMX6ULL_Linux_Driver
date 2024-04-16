@@ -8,13 +8,12 @@
 /*
  * argc : Argument of APP
  * argv[] : char data type, body of Argument
- * ./paltledAPP <filename> <0/OFF:1/ON>
- * ./platledAPP /dev/platled 1 : LEDON
- * ./platledAPP /dev/platled 0 : LEDOFF
+ * ./miscbeepAPP <filename> <0/OFF:1/ON>
+ * ./miscbeepAPP /dev/miscbeep 1 : BEEP_ON
+ * ./miscbeepAPP /dev/miscbeep 0 : BEEP_OFF
  */
 
-#define LEDOFF  0
-#define LEDON   1
+
 
 /* MAIN Function */
 int main(int argc, char *argv[])
