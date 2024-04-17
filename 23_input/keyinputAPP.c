@@ -5,18 +5,21 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <linux/input.h>
 /*
  * argc : Argument of APP
  * argv[] : char data type, body of Argument
- * ./imx6uirqAPP <filename> <0/OFF:1/ON>
- * ./imx6uirqAPP /dev/imx6uirq
+ * ./keyinputAPP <filename> <0/OFF:1/ON>
+ * ./keyinputAPP /dev/input/event1
+ * Purpose: Use input event
  */
 
+static struct input_event inputevent;
 
 /* MAIN Function */
 int main(int argc, char *argv[])
 {
-    int fd, ret;
+    int fd, err;
     char *filename;
     unsigned char data;
 
@@ -36,22 +39,41 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /* Read KEY Value */
     while(1)
     {
-        ret = read(fd, &data, sizeof(data));
-        if(ret < 0)
+        err = read(fd, &inputevent, sizeof(&inputevent));
+        if(err > 0)/* Read data succeed */
         {
-
-        }
-        else
-        {
-            if(data)
+            switch(inputevent.type)
             {
-                printf("key value = %#X\r\n",data);
+                case EV_KEY :
+                    if(inputevent.code < BTN_MISC)  /* KEY (Kernel Define it)*/
+                    {
+                        printf("KEY %d %s\r\n", inputevent.code, inputevent.value ? "Press" : "Release");
+                    }
+                    else
+                    {
+                        printf("Bottom %d %s\r\n", inputevent.code, inputevent.value ? "Press" : "Release");
+                    }
+                    break;
+        
+                case EV_SYN :
+                    printf("EV_SYN Event\r\n");
+                    break;
+                case EV_REL :
+                    printf("EV_REL Event\r\n");
+                    break;
+                case EV_ABS :
+                    printf("EV_ABS Event\r\n");
+                    break;
             }
         }
+        else                /* Read Data Fail */
+        {
+            printf("Fail Read Data\r\n");
+        }
     }
+
 
     /* Everything Normal */
     close(fd);
