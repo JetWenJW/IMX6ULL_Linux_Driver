@@ -42,9 +42,73 @@ struct ap3216c_dev
     struct cdev cdev;
     struct class *class;
     struct device *device;
+    void *private_data;
 };
 
 struct ap3216c_dev ap3216cdev;
+
+/* Step8. Read Muilti Bytes AP3216C Register Value */
+static int ap3216c_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len)
+{
+    struct i2c_msg msg[2];
+    struct i2c_client *client = (struct i2c_client *)dev->private_data;
+
+    /* msg[0] : Master Send Data */
+    msg[0].addr  = client->addr;     /* Slave Address  */
+    msg[0].flags = 0;               /* Tx Data        */
+    msg[0].buf   = &reg;            /* Tx Data buffer */
+    msg[0].len   = 1;               /* Tx buffer Addr */
+
+    /* msg[1] : Master Read Data */
+    msg[0].addr  = client->addr;     /* Slave Address  */
+    msg[0].flags = I2C_M_RD;        /* Rx Data        */
+    msg[0].buf   = val;             /* Rx Data buffer */
+    msg[0].len   = len;             /* Rx buffer Addr */
+    
+    return i2c_transfer(client->adapter, msg, 2);
+
+}
+
+/* Step8_1 Write Muilti Bytes AP3216C Register Value */
+static int ap3216c_write_regs(struct inode *inode, struct file *filp, u8 reg, u8 *buf, u8 len)
+{
+    u8 buffer[8];
+    struct i2c_msg msg[2];
+    struct i2c_client *client = (struct i2c_client *)dev->private_data;
+
+    /* Build Transfer Data Format */
+    buffer[0];
+    memcpy(&buffer[1], buf, len);
+
+    /* msg[0] : Send Data */
+    msg[0].addr  = client->addr;     /* Slave Address  */
+    msg[0].flags = 0;               /* Tx Data        */
+    msg[0].buf   = &buffer;         /* Tx Data buffer */
+    msg[0].len   = len + 1;         /* Tx buffer Addr */
+
+
+    return i2c_transfer(client->adapter, &msg, 1);
+}
+
+/* Step9. Read Register One */
+static unsigned char ap3216c_read_reg(struct ap3216c_dev *dev, u8 reg)
+{
+    u8 data = 0;
+
+    ap3216c_read_regs(dev, reg, &data, 1);
+    return data;
+}
+
+/* Step9. Write Register One */
+static void ap3216c_write_reg(struct ap3216c_dev *dev, u8 reg, u8 data)
+{
+    u8 buffer = 0;
+    buffer = data;
+    ap3216c_write_regs(dev, reg, &buffer, 1);
+}
+
+
+
 
 
 /* Step7_1 file operation Function */
@@ -65,6 +129,7 @@ static int ap3216c_release(struct inode *inode, struct file *filp)
 /* Step7_3 file operation Function */
 ssize_t ap3216c_read(struct file *filp, char __user *buf, size_t cnt, loff_t *off)
 {
+    /* A.  */
     return 0;
 }
 
@@ -147,6 +212,8 @@ static int ap3216c_probe(struct i2c_client *client, cinst struct i2c_device_id *
         ret = PTR_ERR(ap3216cdev.device);
         goto fail_device;
     }
+
+    ap3216cdev.private_data = client;
 
     return 0;
 /* The Order cannot change */
