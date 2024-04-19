@@ -19,6 +19,7 @@
 #include <asm/uaccess.h>
 #include <asm/io.h>
 #include <linux/input.h>
+#include <linux/delay.h>
 #include <linux/i2c.h>
 #include "ap3216creg.h"
 
@@ -43,6 +44,8 @@ struct ap3216c_dev
     struct class *class;
     struct device *device;
     void *private_data;
+
+    unsigned short ir, als, ps;
 };
 
 struct ap3216c_dev ap3216cdev;
@@ -50,22 +53,34 @@ struct ap3216c_dev ap3216cdev;
 /* Step8. Read Muilti Bytes AP3216C Register Value */
 static int ap3216c_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len)
 {
+    int ret = 0;
     struct i2c_msg msg[2];
     struct i2c_client *client = (struct i2c_client *)dev->private_data;
 
     /* msg[0] : Master Send Data */
-    msg[0].addr  = client->addr;     /* Slave Address  */
+    msg[0].addr  = client->addr;    /* Slave Address  */
     msg[0].flags = 0;               /* Tx Data        */
     msg[0].buf   = &reg;            /* Tx Data buffer */
     msg[0].len   = 1;               /* Tx buffer Addr */
 
     /* msg[1] : Master Read Data */
-    msg[0].addr  = client->addr;     /* Slave Address  */
-    msg[0].flags = I2C_M_RD;        /* Rx Data        */
-    msg[0].buf   = val;             /* Rx Data buffer */
-    msg[0].len   = len;             /* Rx buffer Addr */
+    msg[1].addr  = client->addr;    /* Slave Address  */
+    msg[1].flags = I2C_M_RD;        /* Rx Data        */
+    msg[1].buf   = val;             /* Rx Data buffer */
+    msg[1].len   = len;             /* Rx buffer Addr */
     
-    return i2c_transfer(client->adapter, msg, 2);
+    ret = i2c_transfer(client->adapter, msg, 2);
+    if(ret  == 2)
+    {
+        ret = 0;
+    }
+    else
+    {
+        printk("I2C Read Fail = %d, reg = %06x, len = %d \r\n", ret, reg, len);
+        ret = -EREMOTEIO;
+    }
+
+    return ret;
 
 }
 
@@ -81,7 +96,7 @@ static int ap3216c_write_regs(struct inode *inode, struct file *filp, u8 reg, u8
     memcpy(&buffer[1], buf, len);
 
     /* msg[0] : Send Data */
-    msg[0].addr  = client->addr;     /* Slave Address  */
+    msg[0].addr  = client->addr;    /* Slave Address  */
     msg[0].flags = 0;               /* Tx Data        */
     msg[0].buf   = &buffer;         /* Tx Data buffer */
     msg[0].len   = len + 1;         /* Tx buffer Addr */
@@ -107,15 +122,45 @@ static void ap3216c_write_reg(struct ap3216c_dev *dev, u8 reg, u8 data)
     ap3216c_write_regs(dev, reg, &buffer, 1);
 }
 
+/* AP3216C Read Data */
+void ap3216c_readData(struct ap3216c_dev *dev)
+{
+    unsigned char buf[6];
+    unsigned char i = 0;
 
-
-
+    for(i = 0;i < 6; i++)
+    {
+        buf[i] = ap3216c_read_reg(dev, AP3216C_IRDATALOW + i);
+    }
+    if(buf[0] &0x80)/* Ir & PS data invalid */
+    {
+        *dev->ir = 0;
+        *dev->ps = 0;
+    }
+    else            /* Ir & PS data Valid */
+    {
+        *dev->ir = ((unsigned short)buf[1] << 2) | (buf[0] & 0x03);
+        *dev->ps = (((unsigned short)buf[5] & 0x3F) << 4) | (buf[4] & 0x0F);
+    }
+    *dev->als = ((unsigned short)buf[3] << 8) | buf[2] ;
+}
 
 /* Step7_1 file operation Function */
 static int ap3216c_open(struct inode *inode, struct file *filp)
 {
     /* Private Data */
     filp -> private_data = &ap3216cdev;
+    unsigned char value = 0;
+
+    /* 1. INitial Device AP3216C */
+    ap3216c_write_reg(&ap3216cdev, AP3216C_SYSCONG, 0x4);
+    mdelay(50);                                     /* Delay 50ms */    
+    ap3216c_write_reg(&ap3216cdev, AP3216C_SYSCONG, 0x3);
+
+    value = ap3216c_read_reg(&ap3216cdev, AP3216C_SYSTEMCONG);
+    printk("AP3216C_SYSTENCONG = %#x\r\n", value);
+
+    
     return 0;
 }
 
@@ -129,7 +174,17 @@ static int ap3216c_release(struct inode *inode, struct file *filp)
 /* Step7_3 file operation Function */
 ssize_t ap3216c_read(struct file *filp, char __user *buf, size_t cnt, loff_t *off)
 {
-    /* A.  */
+    struct ap3216c_dev *dev = (struct ap3216c_dev *)filp->private_data;
+    short data[3];
+    long err = 0;
+    /* A. Sent Data From AP3216C to APP */
+    ap3216c_readData(dev);
+    data[0] = dev->ir;
+    data[1] = dev->als;
+    data[3] = dev->ps;
+
+    err = copy_to_user(buf, data, sizeof(data));
+
     return 0;
 }
 

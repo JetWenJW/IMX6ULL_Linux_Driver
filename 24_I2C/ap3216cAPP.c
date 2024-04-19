@@ -20,7 +20,8 @@ int main(int argc, char *argv[])
 {
     int fd, err;
     char *filename;
-    int data;
+    unsigned short data[3];
+    unsigned short ir, als, ps;
 
     if(argc != 2)
     {
@@ -38,13 +39,19 @@ int main(int argc, char *argv[])
         return -1;
     }
     
-    err = read(fd, &data, sizeof(&data));
 
     while(1)
     {
-        ;
+        err = read(fd, data, sizeof(data));
+        if(err == 0 )/* Read Succeed */
+        {
+            ir  = data[0];
+            als = data[1];
+            ps  = data[2];
+            printf("AP3216C ir = %d, als = %d, ps = %d\r\n", ir, als, ps);
+        }
+        usleep(200000);     /* 200ms */
     }
-
 
     /* Everything Normal */
     close(fd);
