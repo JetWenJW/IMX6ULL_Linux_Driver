@@ -22,7 +22,7 @@
 #include <linux/delay.h>
 #include <linux/spi/spi.h>
 #include <linux/i2c.h>
-#include "ap3216creg.h"
+#include "icm20608reg.h"
 
 /*  
  * In this Project We are gonna Practice I2C Device
@@ -47,6 +47,8 @@ struct icm20608_dev
     struct class *class;
     struct device *device;
     void *private_data;
+    int cs_gpio;                /* Get Chip Select signal */
+    struct device_node *nd;
 };
 
 struct icm20608_dev icm20608;       /* Decalre Structure */
@@ -74,9 +76,110 @@ static const struct file_operaions icm20608_fops =
     .release = icm20608_release,
 };
 
+/* ICM20608 Read Register Function */
+static int icm20608_read_regs(struct icm20608_dev *dev, u8 reg, void *buf, int len)
+{
+    int ret = 0;
+    unsigned char txdata[len];
+    struct spi_message m;
+    struct spi_transfer *t;
+    struct spi_device *spi = (struct spi_device *)dev->private_data;
+
+    gpio_set_value(dev-> cs_gpio, 0);       /* Chip Select Pull Low */
+    /* Create SPI Transfer */
+    t = kzalloc(sizeof(struct spi_transfer), GFP_KERNEL);
+
+    /* 1. Send Address */
+    txdata[0] = reg | 0x80;
+    t->tx_buf = txdata;
+    t->len    = 1;
+
+    /* 2. SPI message */
+    spi_message_init(&m);
+    spi_message_add_tail(t, &m);
+    ret = spi_sync(spi, &m);
+    
+    /* 3. Read Data */
+    txdata[0] = 0xFF;
+    t->rx_buf = buf;
+    t->len = len;
+
+    spi_message_init(&m);
+    spi_message_add_tail(t, &m);
+    ret = spi_sync(spi, &m);
+
+    kfree(t);
+
+    gpio_set_value(dev-> cs_gpio, 0);       /* Chip Select Pull High */
+}
+
+/* ICM20608 Write Register Function */
+static int icm20608_write_regs(struct icm20608_dev *dev, u8 reg, u8 *buf, int len)
+{
+    int ret = 0;
+    unsigned char txdata[len];
+    struct spi_message m;
+    struct spi_transfer *t;
+    struct spi_device *spi = (struct spi_device *)dev->private_data;
+
+    gpio_set_value(dev-> cs_gpio, 0);       /* Chip Select Pull Low */
+    /* Create SPI Transfer */
+    t = kzalloc(sizeof(struct spi_transfer), GFP_KERNEL);
+
+    /* 1. Send Address */
+    txdata[0] = reg & ~(0x80);
+    t->tx_buf = txdata;
+    t->len    = 1;
+
+    /* 2. SPI message */
+    spi_message_init(&m);
+    spi_message_add_tail(t, &m);
+    ret = spi_sync(spi, &m);
+    
+    /* 3. Read Data */
+    t->tx_buf = buf;
+    t->len = len;
+
+    spi_message_init(&m);
+    spi_message_add_tail(t, &m);
+    ret = spi_sync(spi, &m);
+
+    kfree(t);
+
+    gpio_set_value(dev-> cs_gpio, 0);       /* Chip Select Pull High */
+
+    return ret;
+}
+
+/* ICM20608 Read Single Register */
+static unsigned char icm20608_read_onereg(struct icm20608_dev *dev, u8 reg)
+{
+    u8 data = 0;
+    icm20608_read_regs(dev, reg, *data, 1);
+    return data;
+}
+/* ICM20608 Write Single Register */
+static void icm20608_write_onereg(struct icm20608_dev *dev, u8 reg, u8 value)
+{
+    u8 buffer = value;
+    icm20608_write_regs(dev, reg, &buffer, 1);
+}
+
+/* ICM20608 Initial Function */
+void icm20608_reginit(struct icm20608_dev *dev)
+{
+    /* ICM20608 Initial */
+    u8 value = 0;
+    icm20608_write_onereg(dev, ICM20_PWR_MGMT_1, 0x80);     /* Reset get into sleep Mode			*/
+	mdelay(50);
+	icm20608_write_onereg(dev, ICM20_PWR_MGMT_1, 0x01); 	/* Disable sleep Mode(Auto Select CLK)	*/
+	mdelay(50);
 
 
+    value = icm20608_read_onereg(dev, ICM20_WHO_AM_I);
+    printk("ICM20608 ID = %#X\r\n", value);
 
+}
 
 /* Step5. Probe Function */
 static int icm20608_probe(struct spi_device *spi)
@@ -126,10 +229,38 @@ static int icm20608_probe(struct spi_device *spi)
         goto fail_device;
     }
 
+    /* Get Chip Select Signal*/
+    icm20608dev.nd = of_get_parent(spi->dev.of_node);
+    icm20608dev.cd_gpio = of_get_named_gpio(icm20608dev.nd, "cs-gpio", 0);
+    if(icm20608dev.cs_gpio < 0)
+    {
+        printk("Cannot get cs-gpio\r\n");
+        goto fail_gpio;
+    }
+    ret = gpio_request(icm20608dev.cs_gpio, "cs");
+    if(ret < 0)
+    {
+        printk("cs_gpio request failed ~\r\n");
+    }
+    ret = gpio_direction_output(icm20608dev.cs_gpio, 1);    /* Default Value High Voltage */
+
+
+
+    /* Initial SPI Device Mode(Ex.CPOL,CPHA)*/
+    spi->mode = SPI_MODE_0;
+    spi_setup(spi);
+
+    /* Get SPI Private Data */
     icm20608dev.private_data = spi;
+
+
+    /* ICM20608 Device Initial */
+    icm20608_reginit(&icm20608dev);
 
     return 0;
 
+
+fail_gpio :
 fail_device :
     class_destroy(icm20608dev.class);
 
@@ -138,7 +269,7 @@ fail_class :
 
 fail_cdev : 
     unregister_chrdev_region(icm20608dev.devid, ICM20608_CNT);
-    
+
 fail_devid :
 
     return ret;
@@ -158,6 +289,7 @@ static int icm20608_remove(struct spi_device *spi)
 
     class_destroy(icm20608.class);
 
+    gpio_free(icm20608dev.cs_gpio);
 
     return ret;
 }
