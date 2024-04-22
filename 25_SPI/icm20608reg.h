@@ -1,5 +1,5 @@
-#ifndef __BSP_ICM20608_H
-#define __BSP_ICM20608_H
+#ifndef __ICM20608REG_H
+#define __ICM20608REG_H
 
 
 #define ICM20608G_ID         0xAF       /* ID */

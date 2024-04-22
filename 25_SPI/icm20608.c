@@ -49,33 +49,20 @@ struct icm20608_dev
     void *private_data;
     int cs_gpio;                /* Get Chip Select signal */
     struct device_node *nd;
+
+    /* ICM20608 Parameter */
+	signed int gyro_x_act;		
+	signed int gyro_y_act;		
+	signed int gyro_z_act;		
+	signed int accel_x_act;		
+	signed int accel_y_act;		
+	signed int accel_z_act;		
+	signed int temp_act;
 };
 
 struct icm20608_dev icm20608;       /* Decalre Structure */
 
-static struct icm20608_open(struct inode *inode, struct file *filp)
-{
-
-}
-
-ssize_t icm20608_read(struct file *filp, char __user *buf, size_t cnt, loff_t *off)
-{
-
-}
-
-static int icm20608_release(struct inode *inode, struct file *filp)
-{
-
-}
-
-static const struct file_operaions icm20608_fops = 
-{
-    .owner   = THIS_MODULE,
-    .open    = icm20608_open,
-    .read    = icm20608_read,
-    .release = icm20608_release,
-};
-
+#if 0
 /* ICM20608 Read Register Function */
 static int icm20608_read_regs(struct icm20608_dev *dev, u8 reg, void *buf, int len)
 {
@@ -150,6 +137,39 @@ static int icm20608_write_regs(struct icm20608_dev *dev, u8 reg, u8 *buf, int le
 
     return ret;
 }
+#endif
+
+
+/* SPI Read Function(This Function Provide by Kernel) */
+static int icm20608_read_regs(struct icm20608_dev *dev, u8 reg, void *buf, int len)
+{
+    u8 data = 0;
+    struct spi_device *spi = (struct spi_device *)dev->peivate_data;
+
+    gpio_set_value(dev->cs_gpio, 0);    /* Pull Low Chip Select */
+
+    data = reg | 0x80;
+    spi_write(spi, &data, 1);
+    spi_read(spi, buf, len);
+
+    gpio_set_value(dev->cs_gpio, 1);    /* Pull High Chip Select */
+}
+
+/* SPI Write Function(This Function Provide by Kernel) */
+static int icm20608_write_regs(icm20608_dev *dev, u8 reg, u8 *buf, int len)
+{
+    u8 data = 0;
+    struct spi_device *spi = (struct spi_device *)dev->peivate_data;
+
+    gpio_set_value(dev->cs_gpio, 0);    /* Pull Low Chip Select  */
+
+    data = reg & ~(0x80);
+    spi_write(spi, &data, 1);           /* Write Dest. Address   */
+    spi_write(spi, buf, len);           /* Write Data & Length   */
+
+    gpio_set_value(dev->cs_gpio, 1);    /* Pull High Chip Select */
+
+}
 
 /* ICM20608 Read Single Register */
 static unsigned char icm20608_read_onereg(struct icm20608_dev *dev, u8 reg)
@@ -163,6 +183,21 @@ static void icm20608_write_onereg(struct icm20608_dev *dev, u8 reg, u8 value)
 {
     u8 buffer = value;
     icm20608_write_regs(dev, reg, &buffer, 1);
+}
+
+/* ICM20608 Read Data */
+void icm20608_readdata(struct icm20608_dev *dev)
+{
+    unsigned char data[14];
+    icm20608_read_regs(dev, ICM20_ACCEL_XOUT_H, data, 14);
+
+    dev->accel_x_act = (signed short)((data[0] << 8) | data[1]);
+    dev->accel_y_act = (signed short)((data[2] << 8) | data[3]);
+    dev->accel_z_act = (signed short)((data[4] << 8) | data[5]);
+    dev->temp_adc    = (signed short)((data[6] << 8) | data[7]);
+    dev->gyro_x_act  = (signed short)((data[8] << 8) | data[9]);
+    dev->gyro_y_act  = (signed short)((data[10] << 8) | data[11]);
+    dev->gyro_z_act  = (signed short)((data[12] << 8) | data[13]);
 }
 
 /* ICM20608 Initial Function */
@@ -179,7 +214,58 @@ void icm20608_reginit(struct icm20608_dev *dev)
     value = icm20608_read_onereg(dev, ICM20_WHO_AM_I);
     printk("ICM20608 ID = %#X\r\n", value);
 
+    icm20608_write_onereg(&icm20608dev, ICM20_SMPLRT_DIV,    0x00); 	
+	icm20608_write_onereg(&icm20608dev, ICM20_GYRO_CONFIG,   0x18); 	/* gyro ±2000dps  				           */
+	icm20608_write_onereg(&icm20608dev, ICM20_ACCEL_CONFIG,  0x18); 	/* accelerater ±16G   					   */
+	icm20608_write_onereg(&icm20608dev, ICM20_CONFIG,        0x04); 	/* gyro low-pass filter BW = 20Hz 	       */
+	icm20608_write_onereg(&icm20608dev, ICM20_ACCEL_CONFIG2, 0x04); 	/* accelerater low-pass filter BW = 21.2Hz */
+	icm20608_write_onereg(&icm20608dev, ICM20_PWR_MGMT_2,    0x00); 	/* Open all axis of accelerater & gyro     */
+	icm20608_write_onereg(&icm20608dev, ICM20_LP_MODE_CFG,   0x00); 	/* Close Low Power 						   */
+	icm20608_write_onereg(&icm20608dev, ICM20_FIFO_EN,       0x00);		/* Close FIFO						       */
+
 }
+
+static struct icm20608_open(struct inode *inode, struct file *filp)
+{
+    filp->private_data = &icm20608dev;
+    return 0;
+}
+
+ssize_t icm20608_read(struct file *filp, char __user *buf, size_t cnt, loff_t *off)
+{
+    signed int data[7];
+    long err = 0;
+    struct icm20608_dev *dev = (struct icm20608_dev *)filp->private_data;
+
+    icm20608_readdata(dev);
+    data[0] = dev->gyro_x_adc;
+    data[1] = dev->gyro_y_adc;
+    data[2] = dev->gyro_z_adc;
+    data[3] = dev->accel_x_adc;
+    data[4] = dev->accel_y_adc;
+    data[5] = dev->accel_z_adc;
+    data[6] = dev->temp_adc;
+    err = copy_to_user(buf, data, sizeof(data));
+    return 0;
+}
+
+static int icm20608_release(struct inode *inode, struct file *filp)
+{
+    return 0;
+}
+
+static const struct file_operaions icm20608_fops = 
+{
+    .owner   = THIS_MODULE,
+    .open    = icm20608_open,
+    .read    = icm20608_read,
+    .release = icm20608_release,
+};
+
+
+
+
+
 
 /* Step5. Probe Function */
 static int icm20608_probe(struct spi_device *spi)
