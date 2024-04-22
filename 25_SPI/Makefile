@@ -2,7 +2,7 @@ KERNELDIR := /home/ubuntu/SOC_UBOOT/linux-imx-rel_imx_4.1.15_2.1.0_ga
 
 CURRENT_PATH := $(shell pwd)
 
-obj-m := ap3216c.o
+obj-m := icm20608.o
 
 build : kernel_modules
 
