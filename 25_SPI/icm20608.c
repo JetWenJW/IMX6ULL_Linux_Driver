@@ -24,6 +24,7 @@
 #include <linux/i2c.h>
 #include "icm20608reg.h"
 
+
 /*  
  * In this Project We are gonna Practice I2C Device
  * 1. Add SPI ICM20608 sub-device node to Device Tree
