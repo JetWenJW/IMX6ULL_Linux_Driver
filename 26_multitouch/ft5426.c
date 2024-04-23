@@ -21,7 +21,6 @@
 #include <linux/input.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
-#include "ap3216creg.h"
 
 /*  
  * In this Project We are gonna Practice I2C Device
@@ -30,8 +29,16 @@
  * 3. Accompilshed the Framework
  */
 
+#define MAX_SUPPORT_POINTS              5       /* 5 Point Touch */
+#define FT5426_TOUCH_EVENT_DOWN			0x00	/* Press 	 	 */
+#define FT5426_TOUCH_EVENT_UP			0x01	/* Release	 	 */
+#define FT5426_TOUCH_EVENT_ON			0x02	/* Touch 	  	 */
+#define FT5426_TOUCH_EVENT_RESERVED		0x03	/* No Event      */
 
-
+#define FT5426_TD_STATUS_REG            0x02    /* The Address of Status        */
+#define FT5426_DEVICE_MODE_REG		    0X00 	/* Mode Register 			    */
+#define FT5426_IDG_MODE_REG			    0XA4	/* Interrupt Mode				*/
+#define FT5426_READLEN                  29      /* The Number Of Reg Will read  */
 
 /* Step6. Create Structure of AP3216C for registering Funciton */
 struct ft5426_dev
@@ -50,7 +57,7 @@ static int ft5426_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len)
 {
     int ret = 0;
     struct i2c_msg msg[2];
-    struct i2c_client *client = (struct i2c_client *)dev->private_data;
+    struct i2c_client *client = (struct i2c_client *)dev->client;
 
     /* msg[0] : Master Send Data */
     msg[0].addr  = client->addr;    /* Slave Address  */
@@ -84,7 +91,7 @@ static int ft5426_write_regs(struct inode *inode, struct file *filp, u8 reg, u8 
 {
     u8 buffer[256];
     struct i2c_msg msg[2];
-    struct i2c_client *client = (struct i2c_client *)dev->private_data;
+    struct i2c_client *client = (struct i2c_client *)dev->client;
 
     /* Build Transfer Data Format */
     buffer[0];
@@ -109,6 +116,17 @@ static void ft5426_write_reg(struct ap3216c_dev *dev, u8 reg, u8 data)
     ft5426_write_regs(dev, reg, &buffer, 1);
 }
 
+/* Step 6 Read Register One */
+static u8 ft5426_read_reg(struct ft5426_dev *dev, u8 reg)
+{
+    u8 data = 0;
+    ft5426_read_regs(dev, reg, &data, 1);
+    return data;
+}
+
+
+
+
 /* Step3. Traditional Matched Table (id_table) */
 static struct i2c_device_id ft5426_id[] =
 {
@@ -122,7 +140,15 @@ static struct of_device_id ft5426_of_match[] =
     {}
 };
 
-/* Step5.1 Reset FT5426 Function */
+/* Step5.3 IRQ Handler of FT5426 */
+static irqreturn_t ft5426_hanlder(int irq, void *dev_id)
+{
+    printk("FT5426 Handler\r\n");
+    return IRQ_HANDLED;
+}
+
+
+/* Step5.1 Reset Initial FT5426 Function */
 static int ft5426_ts_reset(struct i2c_client *client, struct ft5426_dev *dev)
 {
     int ret = 0;
@@ -130,9 +156,35 @@ static int ft5426_ts_reset(struct i2c_client *client, struct ft5426_dev *dev)
     {
         ret = devm_gpio_request_one(&client->dev, dev->reset_pin, GPIOF_OUT_INIT_LOW, "edt-ft5426 reset");
         if(ret) return ret;
-        msleep(5);
+        msleep(5);                          /* 5ms */
         gpio_set_value(dev->reset_pin, 1);
         msleep(300);
+    }
+    return 0;
+}
+
+/* Step5.2 IRQ Initial FT5426 Function */
+static int ft5426_ts_irq(struct i2c_client *client, struct ft5426_dev *dev)
+{
+    int ret = 0;
+    /* 1. Request GPIO Interrupt */
+    if(gpio_is_valid(dev->irq_pin))
+    {
+        ret = devm_gpio_request_one(&client->dev, dev->irq_pin, GPIOF_IN, "edt-ft5426 irq");
+        if(ret)
+        {
+            dev_err(&client->dev, "Failed to GPIO %d, error %d\r\n", dev->irq_pin, ret);
+            return 0;
+        }
+    }
+
+    /* 2. Threaded IRQ IO Interrupt */
+    ret = devm_request_threaded_irq(&client->dev, client->irq, NULL, ft5426_hanlder, 
+                                    IRQF_TRIGGER_FALLING | IRQF_ONESHOT, client->name, &ft5426);
+    if(ret)
+    {
+        dev_err(&client->dev, "Unable to Request TouchScreen IRQ. \r\n");
+        return ret ;
     }
     return 0;
 }
@@ -141,16 +193,22 @@ static int ft5426_ts_reset(struct i2c_client *client, struct ft5426_dev *dev)
 static int ft5426_probe(struct i2c_client *client, cinst struct i2c_device_id *id)
 {   
     int ret = 0;
-    
+    int val = 0
     ft5426.client = client;
 
     /* Get IRQ & Reset Pin */
     ft5426.irq_pin = of_get_name_gpio(client->dev.of_node, "interrupt-gpios", 0);
     ft5426.reset_pin = of_get_name_gpio(client->dev.of_node, "reset-gpios", 0);
 
+    ft5426_ts_reset(client, &ft5426);   /* Initial FT5426 Reset Pin */
+    ft5426_ts_irq(client, &ft5426);     /* Initial FT5426 IRQ Pin   */
 
+    /* Initial FT5426 */
+    ft5426_write_reg(&ft5426, FT5426_DEVICE_MODE_REG, 0);   /* Set Ft5426 as Normal Mode */
+    ft5426_write_reg(&ft5426, FT5426_IDG_MODE_REG, 1);      /* Set FT5426 as IRQ Mode    */
 
-
+    val = ft5426_read_reg(&ft5426, FT5426_IDG_MODE_REG);
+    printk("FT5426_IDG_MODE_REG %#x\r\n", val);
     return 0;
 }
 
