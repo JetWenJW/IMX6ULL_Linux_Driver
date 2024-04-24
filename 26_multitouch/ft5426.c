@@ -21,6 +21,8 @@
 #include <linux/input.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include <linux/input/mt.h>
+#include <linux/input/touchscreen.h>
 
 /*  
  * In this Project We are gonna Practice I2C Device
@@ -48,6 +50,7 @@ struct ft5426_dev
     int irq_num;
     void *private_data;
     struct i2c_client *client;
+    struct input_dev *input;
 };
 
 struct ft5426_dev ft5426;
@@ -116,6 +119,7 @@ static void ft5426_write_reg(struct ap3216c_dev *dev, u8 reg, u8 data)
     ft5426_write_regs(dev, reg, &buffer, 1);
 }
 
+#if 0   /* Just for Test */
 /* Step 6 Read Register One */
 static u8 ft5426_read_reg(struct ft5426_dev *dev, u8 reg)
 {
@@ -123,9 +127,7 @@ static u8 ft5426_read_reg(struct ft5426_dev *dev, u8 reg)
     ft5426_read_regs(dev, reg, &data, 1);
     return data;
 }
-
-
-
+#endif
 
 /* Step3. Traditional Matched Table (id_table) */
 static struct i2c_device_id ft5426_id[] =
@@ -143,7 +145,53 @@ static struct of_device_id ft5426_of_match[] =
 /* Step5.3 IRQ Handler of FT5426 */
 static irqreturn_t ft5426_hanlder(int irq, void *dev_id)
 {
-    printk("FT5426 Handler\r\n");
+    struct ft5426_dev *multi_touch_data = dev_id;
+    u8 Readbuffer[29];
+    int i, type, x, y, id;
+    int offset, tplen;
+    int ret;
+    bool p_down;
+
+    offset = 1;      /* Offset is 1Because Read from Register 0x03         */
+    tplen  = 6;      /* One touch Data Use 6 Register to Store Touch Value */
+
+    /* 1. Read Touch point Data From FT5426 */
+    memset(Readbuffer, 0, sizeof(Readbuffer));  /* Clear */
+    ret = ft5426_read_regs(multi_touch_data, FT5426_TD_STATUS_REG, Readbuffer, FT5426_READLEN);
+    if(ret < 0)
+    {
+        goto fail;
+    }
+    
+    for( i = 0;i < MAX_SUPPORT_POINTS; i++)
+    {
+        /* 2. Report Touch Point Data to TypeB format */
+        u8 *buf = &Readbuffer[i * tplen + offset];
+        type = buf[0] >> 6;
+        if(type == FT5426_TOUCH_EVENT_RESERVED) continue;
+
+        x = ((buf[2] << 8) | (buf[3])) & 0xFFF;
+        y = ((buf[0] << 8) | (buf[1])) & 0xFFF;
+
+        id = (buf[2] >> 4) & 0x0F;
+        p_down = type != FT5426_TOUCH_EVENT_UP;
+
+        /* 3. Report Data */
+        input_mt_slot(multi_touch_data->input, id);     /* ABS_MT_SLOT */
+        input_mt_report_slot_state(multi_touch_data->input, MT_TOOL_FINGER, p_down);                   /* ABS_MT_TRACHING_ID */
+        if(!p_down)
+        {
+            continue;
+        }
+        input_report_abs(multi_touch_data->input, ABS_MT_POSITION_X, x);    /* ABS_MT_POSITION_X */
+        input_report_abs(multi_touch_data->input, ABS_MT_POSITION_Y, y);    /* ABS_MT_POSITION_Y */
+    }
+
+    /* Synchronize */
+    input_mt_report_pointer_emulation(multi_touch_data->input, true);
+    input_sync(multi_touch_data->input);
+
+fail :
     return IRQ_HANDLED;
 }
 
@@ -193,29 +241,78 @@ static int ft5426_ts_irq(struct i2c_client *client, struct ft5426_dev *dev)
 static int ft5426_probe(struct i2c_client *client, cinst struct i2c_device_id *id)
 {   
     int ret = 0;
-    int val = 0
+    //int val = 0   /* Just for Test */
     ft5426.client = client;
 
     /* Get IRQ & Reset Pin */
     ft5426.irq_pin = of_get_name_gpio(client->dev.of_node, "interrupt-gpios", 0);
     ft5426.reset_pin = of_get_name_gpio(client->dev.of_node, "reset-gpios", 0);
 
-    ft5426_ts_reset(client, &ft5426);   /* Initial FT5426 Reset Pin */
-    ft5426_ts_irq(client, &ft5426);     /* Initial FT5426 IRQ Pin   */
+    ret = ft5426_ts_reset(client, &ft5426);   /* Initial FT5426 Reset Pin */
+    if(ret < 0)
+    {
+        goto fail;
+    }
 
+    ft5426_ts_irq(client, &ft5426);     /* Initial FT5426 IRQ Pin   */
+    if(ret < 0)
+    {
+        goto fail;
+    }
     /* Initial FT5426 */
     ft5426_write_reg(&ft5426, FT5426_DEVICE_MODE_REG, 0);   /* Set Ft5426 as Normal Mode */
     ft5426_write_reg(&ft5426, FT5426_IDG_MODE_REG, 1);      /* Set FT5426 as IRQ Mode    */
 
+#if 0       /* Just for Test */
     val = ft5426_read_reg(&ft5426, FT5426_IDG_MODE_REG);
     printk("FT5426_IDG_MODE_REG %#x\r\n", val);
+#endif
+
+    /* Register Input Device */
+    ft5426.input = devm_input_allocate_device(&client->dev);
+    if(!ft5426.input)
+    {
+        ret = -ENOMEM;
+        goto fail;
+    }
+    ft5426.input->name = client->name;
+    ft5426.input->id.bustype = BUS_I2C;
+    ft5426.input->dev.parent = &client->dev;
+
+    __set_bit(EV_SYN, ft5426.input->evbit);
+    __set_bit(EV_KEY, ft5426.input->evbit);
+    __set_bit(EV_ABS, ft5426.input->evbit);
+    __set_bit(BTN_TOUCH, ft5426.input->keybit);
+
+    /* Single Touch */
+    input_set_abs_params(ft5426.input, ABS_X, 0, 1024, 0, 0);
+    input_set_abs_params(ft5426.input, ABS_Y, 0, 600, 0, 0);
+
+    /* Multi-touch */
+    input_set_abs_params(ft5426.input, ABS_MT_POSITION_X, 0, 1024, 0, 0);
+    input_set_abs_params(ft5426.input, ABS_MT_POSITION_Y, 0, 600, 0, 0);
+    ret = input_mt_init_slots(ft5426.input, MAX_SUPPORT_POINTS, 0);
+    if(ret)
+    {
+        goto fail;
+    }
+    
+    ret = input_register_device(ft5426.input);
+    if(ret)
+    {
+        goto fail;
+    }
     return 0;
+
+
+fail : 
+    return ret;
 }
 
 /* Step5. Remove Function(this Function will be called when Deleted) */
 static int ft5426_remove(struct i2c_client *client)
 {   
-
+    input_unregister_device(ft5426.input);
     return 0;
 }
 
