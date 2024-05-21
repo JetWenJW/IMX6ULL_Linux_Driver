@@ -24,6 +24,7 @@
 #include <linux/input/mt.h>
 #include <linux/input/touchscreen.h>
 #include <linux/blkdev.h>
+#include <linux/hdreg.h>
 
 
 
@@ -40,16 +41,61 @@ struct ramdisk_dev
     struct  gendisk *gendisk;
     struct request_queue *queue;
     spinlock_t lock;
-
-
 };
 
 struct ramdisk_dev ramdisk;
 
+/* Data transfer proccess */
+static void ramdisk_transfer(struct request *req)
+{
+    /* Data Transfer 3 Factor: 
+     * Source(Memory), Destnation(Block Device), Length 
+     */
+
+    /* blk_rq_pos Get The Sector Address of Block Device 
+     * However we need to get Byte  of Address
+     * So we need to << 9(512 byte)
+     */
+    unsigned long start = blk_rq_pos(req) << 9;
+    
+    /* Data Length of Block Devie Data */
+    unsigned long len = blk_rqcur_bytes(req);
+
+    /* Get the "bio" Data
+     * Read : bio store Data that we wanna read from Disk
+     * Write : bio store Data that we wanna Write to Disk
+     */
+    void * buffer = bio_data(req->bio);
+
+    if(rq_data_dir(req) == READ)        /* Read */
+    {
+        memcpy(buffer, ramdisk.buffer + start, len);
+    }
+    else                                /* Write */
+    {
+        memcpy(ramdisk.buffer + start, buffer, len);
+    }
+}
+
+
 /* Request Function */
 static void ramdisk_request_fn(struct request_queue *q)
 {
+    struct request *req;
+    int err = 0;
 
+    req = blk_fetch_request(q);
+    while(req)
+    {
+        ramdisk_transfer(req);
+
+        /* Request Handler (Read/Write Operations) */
+        if(! __blk_end_request_cur(req, err))
+        {
+            req = blk_fetch_request(q);
+        }
+        
+    }
 }
 
 /* Open Function of Block Device Operations */
@@ -66,10 +112,20 @@ static void ramdisk_release(struct gendisk *disk, fmode_t mode)
     return 0;
 }
 
-/* Getgeo Function of Block Device Operations */
+/* Getgeo Function of Block Device Operations
+ * This Function is used to get the informations of Disk
+ * Such as heads, cylinders, sectors
+ * The Archtechture
+ */
 struct int ramdisk_getgeo(struct block_device *dev, struct hd_geometry *geo)
 {
+    /* Get The Disk Message */
     printk("ramdisk getgeo\r\n");
+
+    geo->heads      = 2;
+    geo->cylinders  = 32;
+    geo->sectors    = RAMDISK_SIZE/(2 * 32 * 512);
+
     return 0;
 }
 
