@@ -21,6 +21,7 @@
 #include <linux/input.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include <linux/regmap.h>
 #include "ap3216creg.h"
 
 /*  
@@ -46,10 +47,14 @@ struct ap3216c_dev
     void *private_data;
 
     unsigned short ir, als, ps;
+
+    struct regmap * regmap;
+    struct regmap_config regmap_config;
 };
 
 struct ap3216c_dev ap3216cdev;
 
+#if 0
 /* Step8. Read Muilti Bytes AP3216C Register Value */
 static int ap3216c_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len)
 {
@@ -104,22 +109,27 @@ static int ap3216c_write_regs(struct inode *inode, struct file *filp, u8 reg, u8
 
     return i2c_transfer(client->adapter, &msg, 1);
 }
+#endif
 
 /* Step9. Read Register One */
 static unsigned char ap3216c_read_reg(struct ap3216c_dev *dev, u8 reg)
 {
-    u8 data = 0;
+    u8 reg = 0;
+    unsigned int data = 0;
 
-    ap3216c_read_regs(dev, reg, &data, 1);
-    return data;
+    /* Use regmap API Function read data from I2C */
+    ret = regmap_read(dev->regmap, reg, &data);
+    return (u8)data;
 }
 
 /* Step9. Write Register One */
 static void ap3216c_write_reg(struct ap3216c_dev *dev, u8 reg, u8 data)
 {
-    u8 buffer = 0;
-    buffer = data;
-    ap3216c_write_regs(dev, reg, &buffer, 1);
+    u8 ret = 0;
+
+    /* Use Regmap API Function to Write Data to I2C */
+    ret = regmap_write(dev->regmap, reg, data);
+    //ap3216c_write_regs(dev, reg, &buffer, 1);
 }
 
 /* AP3216C Read Data */
@@ -268,9 +278,15 @@ static int ap3216c_probe(struct i2c_client *client, cinst struct i2c_device_id *
         goto fail_device;
     }
 
+    /* Regmap Initial */
+    ap3216cdev.regmap_config.reg_bits = 8;
+    ap3216cdev.regmap_config.val_bits = 8;
+    ap3216cdev.regmap = regmap_init_i2c(client, &ap3216cdev.regmap_config);
+
     ap3216cdev.private_data = client;
 
     return 0;
+
 /* The Order cannot change */
 fail_device :
     class_destroy(ap3216cdev.class);
@@ -300,6 +316,9 @@ static int ap3216c_remove(struct i2c_client *client)
      */
     device_destroy(ap3216cdev.class, ap3216cdev.device);
     class_destroy(ap3216cdev.class);
+
+    /* regmap delete */
+    regmap_exit(ap3216cdev.regmap);
     return 0;
 }
 
