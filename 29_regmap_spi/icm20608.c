@@ -22,6 +22,7 @@
 #include <linux/delay.h>
 #include <linux/spi/spi.h>
 #include <linux/i2c.h>
+#include <linux/regmap.h>
 #include "icm20608reg.h"
 
 
@@ -34,9 +35,6 @@
 
 #define ICM20608_CNT        1
 #define ICM20608_NAME       "icm20608"
-
-
-
 
 /* Step6. SPI Structure */
 struct icm20608_dev
@@ -59,57 +57,39 @@ struct icm20608_dev
 	signed int accel_y_act;		
 	signed int accel_z_act;		
 	signed int temp_act;
+
+    struct regmap * regmap;
+    struct regmap_config regmap_config;
+
 };
 
 struct icm20608_dev icm20608;       /* Decalre Structure */
 
-/* SPI Read Function(This Function Provide by Kernel) */
-static int icm20608_read_regs(struct icm20608_dev *dev, u8 reg, void *buf, int len)
-{
-    u8 data = 0;
-    struct spi_device *spi = (struct spi_device *)dev->peivate_data;
-
-    data = reg | 0x80;
-    spi_write_then_read(spi, &data, 1, buf, len);
-    
-    return 0;
-}
-
-/* SPI Write Function(This Function Provide by Kernel) */
-static int icm20608_write_regs(icm20608_dev *dev, u8 reg, u8 *buf, int len)
-{
-    u8 *txdata;
-    struct spi_device *spi = (struct spi_device *)dev->peivate_data;
-
-    txdata = kzalloc(len + 1, GFP_KERNEL);
-
-    txdata[0] = reg & ~0x80;
-    memcpy(&txdata[1], buf, len);
-    spi_write(spi, txdata, len + 1);
-    kfree(txdata);
-    return 0;
-}
-
 /* ICM20608 Read Single Register */
 static unsigned char icm20608_read_onereg(struct icm20608_dev *dev, u8 reg)
 {
-    u8 data = 0;
-    icm20608_read_regs(dev, reg, *data, 1);
-    return data;
+    unsigned int data = 0;
+    u8 ret = 0;
+    /* Use regmap API Function to Read One Data from SPI */
+    ret = regmap_read(dev->regmap, reg, &data);
+    return (u8)data;
 }
-
 /* ICM20608 Write Single Register */
 static void icm20608_write_onereg(struct icm20608_dev *dev, u8 reg, u8 value)
 {
-    u8 buffer = value;
-    icm20608_write_regs(dev, reg, &buffer, 1);
+    u8 ret = 0;
+    /* Use regmap API Function to write One Data to SPI */
+    ret = regmap_write(dev->regmap, reg, value);
 }
 
 /* ICM20608 Read Data */
 void icm20608_readdata(struct icm20608_dev *dev)
 {
     unsigned char data[14];
-    icm20608_read_regs(dev, ICM20_ACCEL_XOUT_H, data, 14);
+    u8 ret = 0;
+
+    /* Use regmap API Function to Read Bulk of Data from SPI */
+    ret = regmap_bulk_read(dev->regmap, ICM20_ACCEL_XOUT_H, data, 14);
 
     dev->accel_x_act = (signed short)((data[0] << 8) | data[1]);
     dev->accel_y_act = (signed short)((data[2] << 8) | data[3]);
@@ -140,7 +120,7 @@ void icm20608_reginit(struct icm20608_dev *dev)
 	icm20608_write_onereg(&icm20608dev, ICM20_CONFIG,        0x04); 	/* gyro low-pass filter BW = 20Hz 	       */
 	icm20608_write_onereg(&icm20608dev, ICM20_ACCEL_CONFIG2, 0x04); 	/* accelerater low-pass filter BW = 21.2Hz */
 	icm20608_write_onereg(&icm20608dev, ICM20_PWR_MGMT_2,    0x00); 	/* Open all axis of accelerater & gyro     */
-	icm20608_write_onereg(&icm20608dev, ICM20_LP_MODE_CFG,   0x00); 	/* Close Low Power */						   
+	icm20608_write_onereg(&icm20608dev, ICM20_LP_MODE_CFG,   0x00); 	/* Close Low Power 						   */
 	icm20608_write_onereg(&icm20608dev, ICM20_FIFO_EN,       0x00);		/* Close FIFO						       */
 
 }
@@ -230,6 +210,11 @@ static int icm20608_probe(struct spi_device *spi)
         goto fail_device;
     }
 
+    /* Regmap Initial */ 
+    icm20608_dev.regmap_config.reg_bits = 8;
+    icm20608_dev.regmap_config.val_bits = 8;
+    icm20608_dev.regmap_config.read_flag_mask = 0x80;
+    icm20608_dev.regmap = regmap_init_spi(spi, &icm20608_dev.regmap_config,);
 
     /* Initial SPI Device Mode(Ex.CPOL,CPHA)*/
     spi->mode = SPI_MODE_0;
@@ -275,6 +260,8 @@ static int icm20608_remove(struct spi_device *spi)
 
     gpio_free(icm20608dev.cs_gpio);
 
+    /* regmap delete */
+    regmap_exit(icm20608_dev.regmap);
     return ret;
 }
 
@@ -308,9 +295,6 @@ struct spi_driver icm20608_driver
     },
     .id_table = icm20608_id,
 };
-
-
-
 
 /* Step1. Entry Point Function */
 static int __init icm20608_init(void)
