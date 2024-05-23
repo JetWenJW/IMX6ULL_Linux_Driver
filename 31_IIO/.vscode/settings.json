@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "slab.h": "c",
+        "kernel.h": "c",
+        "fs.h": "c",
+        "init.h": "c",
+        "icm20608reg.h": "c"
+    }
+}
