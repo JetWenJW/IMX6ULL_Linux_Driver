@@ -43,10 +43,62 @@
 #define ICM20608_CNT        1
 #define ICM20608_NAME       "icm20608"
 
+/* Define ICM20608 Scan Structure */
+enum inv_icm20608_scan
+{
+    INV_ICM20608_SCAN_ACCL_X,
+    INV_ICM20608_SCAN_ACCL_Y,
+    INV_ICM20608_SCAN_ACCL_Z,
+    INV_ICM20608_SCAN_TEMP,
+    INV_ICM20608_SCAN_GYRO_X,
+    INV_ICM20608_SCAN_GYRO_Y,
+    INV_ICM20608_SCAN_GYRO_Z,
+    INV_ICM20608_SCAN_TIMESTAMP,
+};
+
+#define ICM20608_CHAN(_type, channel2, _index){             \
+    .type = _type,                                          \
+    .modified = 1,                                          \
+    .channel2 = channel2,                                   \
+    .info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE)    \
+    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW)            \
+        | BIT(IIO_CHAN_INFO_CALIBBIAS),                     \
+    .scan_index = _index,                                   \
+    .scan_type = {                                          \
+        .sign = 's',                                        \
+        .realbits = 16,                                     \
+        .storagebits = 16,                                  \
+        .shift = 0,                                         \
+        .endianness = IIO_BE,                               \
+    },                                                      \
+}
+
 /* ICM20608 Channel */
 static const struct iio_chan_spec icm20608_channels[] =
 {
+    /* Temperture */
+    .type = IIO_TEMP;
+    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW)
+        | BIT(IIO_CHAN_INFO_SCALE) | BIT(IIO_CHAN_INFO_OFFSET),
+    .scan_index = INV_ICM20608_SCAN_TEMP,
+    .scan_type = 
+    {
+        .sign = 's',
+        .realbits = 16,
+        .storagebits = 16,
+        .shift = 0,
+        .endianness = IIO_BE,
+    },
 
+    /* Accel X, Y, Z Channel */
+    ICM20608_CHAN(IIO_ACCEL, IIO_MOD_X, INV_ICM20608_SCAN_ACCL_X),
+    ICM20608_CHAN(IIO_ACCEL, IIO_MOD_Y, INV_ICM20608_SCAN_ACCL_Y),
+    ICM20608_CHAN(IIO_ACCEL, IIO_MOD_Z, INV_ICM20608_SCAN_ACCL_Z),
+
+    /* Gyro X, Y, Z */
+    ICM20608_CHAN(IIO_ANGL_VEL, IIO_MOD_X, INV_ICM20608_SCAN_GYRO_X),
+    ICM20608_CHAN(IIO_ANGL_VEL, IIO_MOD_Y, INV_ICM20608_SCAN_GYRO_Y),
+    ICM20608_CHAN(IIO_ANGL_VEL, IIO_MOD_Z, INV_ICM20608_SCAN_GYRO_Z),
 };
 
 
@@ -150,7 +202,6 @@ static int icm20608_probe(struct spi_device *spi)
         goto fail_iio_register;
     }
 
-
     /* Regmap Initial */ 
     dev->regmap_config.reg_bits = 8;
     dev->regmap_config.val_bits = 8;
@@ -170,6 +221,7 @@ static int icm20608_probe(struct spi_device *spi)
     icm20608_reginit(dev);
 
     return 0;
+
 fail_regmap_init:
     iio_device_unregister(indio_dev);
 fail_iio_register: 
