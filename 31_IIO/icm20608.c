@@ -43,6 +43,10 @@
 #define ICM20608_CNT        1
 #define ICM20608_NAME       "icm20608"
 
+static const int gyro_scale_icm20608[] = {7629, 15258, 30517, 61035};
+static const int accel_scale_icm20608[] = {61035, 122070, 244140, 4882};
+
+
 /* Define ICM20608 Scan Structure */
 enum inv_icm20608_scan
 {
@@ -155,11 +159,100 @@ void icm20608_reginit(struct icm20608_dev *dev)
 
 }
 
+static int icm20608_sensor_show(struct icm20608_dev *dev, int reg, int axis, int *val)
+{
+    int ind, result;
+    __be16 d;
+
+    ind = (axis - IIO_MOD_X) * 2;
+    result = regmap_bulk_read(dev->regmap, reg + ind, (u8 *)&d, 2);
+    if(result)  return -EINVAL;
+    *val = (short)be_16_to_cpup(&d);
+
+    return IIO_VAL_INT;
+}
+
+static int icm20608_read_channel_data(struct iio_dev *indio_dev, struct iio_chan_spec const *chan, int *val)
+{
+    int ret =0;
+    struct icm20608_dev *dev = iio_priv(indio_dev);
+
+    switch(chan->type)
+    {
+        case IIO_ACCEL:
+            ret = icm20608_sensor_show(dev, ICM20_GYRO_XOUT_H, chan->channel2, val);
+            break;
+
+        case IIO_ANGL_VEL:
+            ret = icm20608_sensor_show(dev, ICM20_ACCEL_XOUT_H, chan->channel2, val);
+            break;
+
+        case IIO_TEMP:
+            ret = icm20608_sensor_show(dev, ICM20_TEMP_OUT_H, IIO_MOD_X, val);
+            break;
+        
+        default:
+            ret = -EINVAL;
+    }
+    return ret;
+}
+
+static int icm20608_read_raw(struct iio_dev *indio_dev, 
+        struct iio_chan_spec const *chan, int * val, int * val2, long mask)
+{
+    int ret =0;
+    struct icm20608_dev *dev = iio_priv(indio_dev);
+
+    /* Distinguished Data Types is offset, scale, raw? */
+    switch(mask)
+    {
+        case IIO_CHAN_INFO_RAW:
+            mutex_lock(&dev->lock);
+            ret = icm20608_read_channel_data(indio_dev, chan, val);
+            mutex_unlock(&dev->lock);
+            return ret;
+
+        case IIO_CHAN_INFO_SCALE:
+            printk("IIO_CHAN_INFO_SCALE\r\n");
+
+            return ret;
+
+        case IIO_CHAN_INFO_OFFSET:
+            printk("IIO_CHAN_INFO_OFFSET\r\n");
+            return ret;
+
+        case IIO_CHAN_INFO_CALIBBIAS:
+            printk("IIO_CHAN_INFO_CALIBBIAS\r\n");
+            return ret; 
+
+        default:
+            return -EINVAL;
+    }
+}
+
+static int icm20608_write_raw(struct iio_dev *indio_dev, 
+        struct iio_chan_spec const *chan, int val, int val2, long mask)
+{
+    printk("icm20608_write_raw\r\n");
+    return 0;
+}
+
+static int icm20608_write_raw_get_fmt(struct iio_dev *indio_dev, 
+        struct iio_chan_spec const *chan, long mask)
+{
+    printk("icm20608_write_raw_get_fmt\r\n");
+    return 0;
+}
+
+
 
 /* iio_info Structure */
 static const struct iio_info icm20608_info = 
 {
-    .driver_module = THIS_MODULE,
+    .driver_module     = THIS_MODULE,
+    .read_raw          = icm20608_read_raw,
+    .write_raw         = icm20608_write_raw,
+    .write_raw_get_fmt = icm20608_write_raw_get_fmt,
 };
 
 /* Step5. Probe Function */
