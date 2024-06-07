@@ -36,6 +36,14 @@
 #define BEEP_OFF        0
 #define BEEP_ON         1
 
+/* 5. Device Structure of MiscBeep */
+struct miscbeep_dev 
+{
+	struct device_node *nd;
+    int beep_gpio;
+};
+
+struct miscbeep_dev miscbeep;
 
 
 /* 7_2. operaions Function */
@@ -68,11 +76,11 @@ static ssize_t miscbeep_write(struct file *filp, const char __user *buf, size_t 
     /* 2. Control Beep : ON/OFF */
     if(databuf[0] == BEEP_ON)
     {
-        gpio_set_value(dev -> beep_gpio, 0); /* ON  */
+        gpio_set_value(dev->beep_gpio, 0); /* ON  */
     }
-    else if(datdbuf[0] == BEEP_OFF)
+    else if(databuf[0] == BEEP_OFF)
     {
-        gpio_set_value(dev -> beep_gpio, 1); /* OFF */
+        gpio_set_value(dev->beep_gpio, 1); /* OFF */
     }
 
     return 0;
@@ -96,24 +104,13 @@ static struct miscdevice beep_miscdev =
 };
 
 
-/* 5. Device Structure of MiscBeep */
-struct miscbeep_dev =
-{
-    struct device_node *nd;
-    int beep_gpio;
-
-};
-
-struct miscbeep_dev miscbeep;
-
-
 /* 4. Probe Function */
 static int miscbeep_probe(struct platform_device *dev)
 {
     int ret = 0;
     /* A_1. Beep IO INitial */
     miscbeep.nd = dev->dev.of_node;     /* Find Device Node Via Platform */
-    miscbeep.beep_gpio = of_get_name_gpio(miscbeep.nd, "beep-gpios", 0);
+    miscbeep.beep_gpio = of_get_named_gpio(miscbeep.nd, "beep-gpios", 0);
     if(miscbeep.beep_gpio < 0)
     {
         ret = -EINVAL;
@@ -144,15 +141,15 @@ static int miscbeep_probe(struct platform_device *dev)
     return 0;
 
 fail_setoutput :
-    gpio_free(miscbeep_gpio);               /* if Error Free IO */
+    gpio_free(miscbeep.beep_gpio);               /* if Error Free IO */
 fail_findgpio :
     return ret;
 }
 /* 4. Remove Function */
 static int miscbeep_remove(struct platform_device *dev)
 {
-    gpio_set_value(miscbeep_gpio, 1);       /* Beep OFF               */
-    gpio_free(miscbeep_gpio);               /* Free IO                */
+    gpio_set_value(miscbeep.beep_gpio, 1);       /* Beep OFF               */
+    gpio_free(miscbeep.beep_gpio);               /* Free IO                */
 
     misc_deregister(&beep_miscdev);         /* Deregister MISC Device */
     return 0;
@@ -163,7 +160,7 @@ static int miscbeep_remove(struct platform_device *dev)
 /* 3. Platform Match Table */
 static const struct of_device_id beep_of_match[] =
 {
-    {compatible = "JetWen,beep"},
+    {.compatible = "JetWen,beep"},
     {/* Sentinel */},
 };
 
@@ -182,14 +179,6 @@ static struct platform_driver miscbeep_driver =
     .probe  = miscbeep_probe,               /* Probe Function         */   
     .remove = miscbeep_remove,              /* Remove Driver Function */
 };
-
-
-
-
-
-
-
-
 
 /* 1. Entry Point of Module */
 static int __init miscbeep_init(void)

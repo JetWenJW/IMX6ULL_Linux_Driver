@@ -110,7 +110,7 @@ static int keyio_init(struct keyinput_dev *dev)
     /* A_2. Get IO Number of Key */
     for(i = 0; i < KEY_NUM; i++)
     {
-        dev -> irqkey[1].gpio = of_get_name_gpio(dev -> nd, "key-gpios", i);
+        dev -> irqkey[1].gpio = of_get_named_gpio(dev -> nd, "key-gpios", i);
         if(dev -> irqkey[1].gpio < 0)
         {
             ret = -EINVAL;
@@ -131,7 +131,7 @@ static int keyio_init(struct keyinput_dev *dev)
             printk("IO %d cannot request~\r\n", dev -> irqkey[1].gpio);
             goto fail_request;
         }
-        gpio_direcftion_input(dev->irqkey[i].gpio); /* Set Pin as Input */
+        gpio_direction_input(dev->irqkey[i].gpio); /* Set Pin as Input */
         ret = gpio_direction_input(dev->irqkey[i].gpio);
         if(ret)
         {
@@ -231,7 +231,7 @@ static void __exit keyinput_exit(void)
     /* 1. Relese Interrupt */
     for(i = 0;i < KEY_NUM;i++)
     {
-        free_irq(keyinputdev.irqkey[i].irqnum, &imx6ulirq);
+        free_irq(keyinputdev.irqkey[i].irqnum, &keyinputdev);
     }
 
     /* 2. FREE IO */
