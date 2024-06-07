@@ -135,7 +135,7 @@ static int __init key_init(void)
 {
     int ret = 0;        /* For Error Happen */
 
-    atomic_set(&key.keyvalue.keyvalue, INVAKEY);    
+    atomic_set(&key.keyvalue, INVAKEY);    
 
     /* 1.Chardev Registry */
     key.major = 0;
@@ -197,7 +197,7 @@ static int __init key_init(void)
     return 0;
 
 fail_device :
-    class_destoy(key.class);
+    class_destroy(key.class);
 fail_class :
     cdev_del(&key.cdev);
 fail_cdev :
@@ -218,7 +218,7 @@ static void __exit key_exit(void)
 
     /* Destroy Device => Class */
     device_destroy(key.class, key.devid);
-    class_destroy(key.classs);
+    class_destroy(key.class);
 
     /* FREE key GPIO */
     gpio_free(key.key_gpio);

@@ -18,8 +18,7 @@
 #include <asm/mach/map.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
-#include <linux/fcntl.h>
-#include <linux/poll.h>
+#include <linux/wait.h>
 #include <linux/ide.h>
 
 
@@ -37,7 +36,7 @@ struct irq_keydesc
     int irqnum;                             /* IRQ Number       */
     unsigned char value;                    /* Key Value        */
     char name[10];                          /* Interrupt name   */                                
-    irqreturn_t (*handler)(int, void *)     /* IRQ Handler      */
+    irqreturn_t (*handler)(int, void *);    /* IRQ Handler      */
 };
 
 
@@ -56,7 +55,8 @@ struct imx6uirq_dev
     atomic_t keyvalue;                      /* For Get Key Value   */
     atomic_t releasekey;                    /* For Detect Release  */
 
-    struct fasync_struct *fasync_queue;     /* For Async Notice    */
+    wait_queue_t r_wait;                    /* Head of Read queue  */     
+
 };
 
 struct imx6uirq_dev imx6uirq; /*  struct Declare */
@@ -69,9 +69,8 @@ static int imx6uirq_open(struct inode *inode, struct file *filp)
 
 static int imx6uirq_release(struct inode *inode, struct file *filp)
 {
-
-    //struct imx6uirq_dev *dev = (struct imx6uirq_dev *)filp -> private_data;
-    return imx6uirq_fasync(-1, filp, 0);
+    struct imx6uirq_dev *dev = (struct imx6uirq_dev *)filp -> private_data;
+    return 0;
 }
 
 static ssize_t imx6uirq_write(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
@@ -88,13 +87,47 @@ static ssize_t imx6uirq_read(struct file *filp, const char __user *buf, size_t c
     unsigned char keyvalue;
     unsigned char releasekey;
     struct imx6uirq_dev *dev = filp->private_data;
-    
+
+#if 0
+    /* Wait For Event */
+    wait_event_interruptible(dev->r_wait, atomic_read(&dev->releasekey));     /* Wait For Key Valid */
+#endif
+
+#if 0
+    DECLARE_WAITQUEUE(wait, current);                       /* Define A Wait Queue                 */
+    if(atomic_read(&dev->releasekey) == 0)                  /* Unpressed key                       */
+    {
+        add_wait_queue(&dev->r_wait, &wait);                /* Add Queue as Wait Queue             */
+        _set_current_state(TASK_INTERUPTIBLE);              /* Set Current Thread as Interruptible */
+        schedule();                                         /* Switch Thread State                 */
+        
+        /* After Waked up Thread, Run the thread */
+        if(signal_pending(current))
+        {
+            ret = -ERESTARTSYS;
+            goto data_error;
+        }
+        _set_current_state(TASK_RUNNING);           /* Current Thread Set As Running State */
+        remove_wait_queue(&dev->r_wait, wait);      /* Delete the Wait Queue               */
+    }
+#endif
+    DECLARE_WAITQUEUE(wait, current);                   /* Define A Wait Queue                 */
+    add_wait_queue(&dev->r_wait, &wait);                /* Add Queue as Wait Queue             */
+    __set_current_state(TASK_INTERRUPTIBLE);              /* Set Current Thread as Interruptible */
+    schedule();                                         /* Switch Thread State                 */
+    /* After Waked up Thread, Run the thread */
+    if(signal_pending(current))
+    {
+        ret = -ERESTARTSYS;
+        goto data_error;
+    }
+
     keyvalue    = atomic_read(&dev->keyvalue);
     releasekey  = atomic_read(&dev->releasekey);
 
     if(releasekey)/* Valid KEY */
     {
-        if(keyvlaue & 0x80)
+        if(keyvalue & 0x80)
         {
             keyvalue &= ~(0x80);
             ret = copy_to_user(buf, &keyvalue, sizeof(keyvalue));
@@ -110,28 +143,19 @@ static ssize_t imx6uirq_read(struct file *filp, const char __user *buf, size_t c
         goto data_error;
     }   
 
-    return ret;
 
 data_error : 
-    return -EINVAL;
+    __set_current_state(TASK_RUNNING);           /* Current Thread Set As Running State */
+    remove_wait_queue(&dev->r_wait, &wait);       /* Delete the Wait Queue               */
+    
+    return ret;
 }
-
-static int imx6uirq_fasync(int fd, struct file *filp, int on)
-{
-    struct imx6uirq_dev *dev = (struct imx6uirq_dev *)filp -> private_data;
-
-    return fasync_helper(fd, filp, on, &dev->fasync_queue);
-}
-
-
 /* Chrdev Operations */
 static const struct file_operations imx6uirq_fops =
 {
     .owner   = THIS_MODULE,             /* The owner of This file */
     .open    = imx6uirq_open,           /* Device Open file       */
-    .read    = imx6uirq_read,           /* Device Read File       */
-    .fasync  = imx6uirq_fasync,         /* Asynchronize           */ 
-    .release = imx6uirq_release         /* For File Release       */
+    .read    = imx6uirq_read            /* Device Read File       */
 };
 
 
@@ -167,14 +191,13 @@ static void timer_func(unsigned long arg)
         atomic_set(&dev->releasekey, 1);
     }
 
-
-    /* For Asynchronize Notice */
-    if(atomic_read(*dev->release))          /* Valid Key  */
+    /* Wake up Thread
+     * Because till tjis part of Program refer to key filter
+     * completed
+     */
+    if(atomic_read(&dev->relesekey))
     {
-        if(dev->fasync_queue)
-        {
-            kill_fasync(&dev->fasync_queue, SIGIO, POLLIN);
-        }
+        wake_up(&dev->r_wait);
     }
 
 }
@@ -197,7 +220,7 @@ static int keyio_init(struct imx6uirq_dev *dev)
     /* A_2. Get IO Number of Key */
     for(i = 0; i < KEY_NUM; i++)
     {
-        dev -> irqkey[1].gpio = of_get_name_gpio(dev -> nd, "key-gpios", i);
+        dev -> irqkey[1].gpio = of_get_named_gpio(dev -> nd, "key-gpios", i);
         if(dev -> irqkey[1].gpio < 0)
         {
             ret = -EINVAL;
@@ -218,7 +241,7 @@ static int keyio_init(struct imx6uirq_dev *dev)
             printk("IO %d cannot request~\r\n", dev -> irqkey[1].gpio);
             goto fail_request;
         }
-        gpio_direcftion_input(dev->irqkey[i].gpio); /* Set Pin as Input */
+        gpio_direction_input(dev->irqkey[i].gpio); /* Set Pin as Input */
         ret = gpio_direction_input(dev->irqkey[i].gpio);
         if(ret)
         {
@@ -280,11 +303,11 @@ static int __init imx6uirq_init(void)
     if(imx6uirq.major)   /* Assign Device ID */
     {
         imx6uirq.devid = MKDEV(imx6uirq.major, 0);
-        ret = register_chrdev_region(imx6uirq.devid, imx6uirq_CNT, imx6uirq_NAME);
+        ret = register_chrdev_region(imx6uirq.devid, IMX6UIRQ_CNT, IMX6UIRQ_NAME);
     }
     else                /* Unassigned Device ID */
     {
-        ret = alloc_chrdev_region(&imx6uirq.devid, 0, imx6uirq_CNT, imx6uirq_NAME);
+        ret = alloc_chrdev_region(&imx6uirq.devid, 0, IMX6UIRQ_CNT, IMX6UIRQ_NAME);
         imx6uirq.major = MAJOR(imx6uirq.devid);
         imx6uirq.minor = MINOR(imx6uirq.devid);
     }
@@ -301,7 +324,7 @@ static int __init imx6uirq_init(void)
     cdev_init(&imx6uirq.cdev, &imx6uirq_fops);
 
     /* 3.Add Chardev to Kernel */
-    ret = cdev_add(&imx6uirq.cdev, imx6uirq.devid, imx6uirq_CNT);
+    ret = cdev_add(&imx6uirq.cdev, imx6uirq.devid, IMX6UIRQ_CNT);
 
     /* Fail Cdev Add */
     if(ret < 0)
@@ -309,7 +332,7 @@ static int __init imx6uirq_init(void)
         goto fail_cdev;
     }
     /* 4.Add Device class */
-    imx6uirq.class = class_create(THIS_MODULE, imx6uirq_NAME);
+    imx6uirq.class = class_create(THIS_MODULE, IMX6UIRQ_CNT);
     if(IS_ERR(imx6uirq.class))
     {
         ret = PTR_ERR(imx6uirq.class);
@@ -317,14 +340,14 @@ static int __init imx6uirq_init(void)
     }
 
     /* 5.Create Device */
-    imx6uirq.device = device_create(imx6uirq.class, NULL, imx6uirq.devid, NULL, imx6uirq_NAME);
+    imx6uirq.device = device_create(imx6uirq.class, NULL, imx6uirq.devid, NULL, IMX6UIRQ_NAME);
     if(IS_ERR(imx6uirq.device))
     {
         ret = PTR_ERR(imx6uirq.device);
         goto fail_device;
     }
     
-    ret = imx6uirqio_init(&imx6uirq);
+    ret = imx6uirq_init(&imx6uirq);
     if(ret < 0)
     {
         goto fail_device;
@@ -342,14 +365,19 @@ static int __init imx6uirq_init(void)
     atomic_set(&imx6uirq.keyvalue, INVAKEY);
     atomic_set(&imx6uirq.releasekey, 0);
 
+
+    /* Initial Wait Queue Head  */
+    init_waitqueue_head(&imx6uirq.r_wait);
+
     return 0;
+
 fail_keyinit :
 fail_device :
-    class_destoy(imx6uirq.class);
+    class_destroy(imx6uirq.class);
 fail_class :
     cdev_del(&imx6uirq.cdev);
 fail_cdev :
-    unregister_chrdev_region(imx6uirq.devid, imx6uirq_CNT);
+    unregister_chrdev_region(imx6uirq.devid, IMX6UIRQ_CNT);
 fail_devid :
     return ret;
 }
@@ -378,11 +406,11 @@ static void __exit imx6uirq_exit(void)
 
     /* Unregistry Chrdev */
     cdev_del(&imx6uirq.cdev);
-    unregister_chrdev_region(imx6uirq.devid, imx6uirq_CNT);
+    unregister_chrdev_region(imx6uirq.devid, IMX6UIRQ_CNT);
 
     /* Destroy Device => Class */
     device_destroy(imx6uirq.class, imx6uirq.devid);
-    class_destroy(imx6uirq.classs);
+    class_destroy(imx6uirq.class);
 }
 
 

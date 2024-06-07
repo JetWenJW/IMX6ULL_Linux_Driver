@@ -123,8 +123,8 @@ static int led_probe(struct platform_device *dev)
     /* 1. Get Resource from Platform */
     for(i = 0; i < 5;i++)
     {
-        ledresource[i] = platform_get_resource(dev, IORESOURCE_MEN, i);
-        if(ledresource[i] == NULL)
+        ledsource[i] = platform_get_resource(dev, IORESOURCE_MEM, i);
+        if(ledsource[i] == NULL)
         {
             return -EINVAL;
         }

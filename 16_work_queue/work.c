@@ -34,7 +34,7 @@ struct irq_keydesc
     int irqnum;                             /* IRQ Number                */
     unsigned char value;                    /* Key Value                 */
     char name[10];                          /* Interrupt name            */                                
-    irqreturn_t (*handler)(int, void *)     /* IRQ Handler               */
+    irqreturn_t (*handler)(int, void *);    /* IRQ Handler               */
     struct tasklet_struct tasklet;          /* For Interrupt Bottom Half */
 
 };
@@ -93,7 +93,7 @@ static ssize_t imx6uirq_read(struct file *filp, const char __user *buf, size_t c
 
     if(releasekey)/* Valid KEY */
     {
-        if(keyvlaue & 0x80)
+        if(keyvalue & 0x80)
         {
             keyvalue &= ~(0x80);
             ret = copy_to_user(buf, &keyvalue, sizeof(keyvalue));
@@ -200,7 +200,7 @@ static int keyio_init(struct imx6uirq_dev *dev)
     /* A_2. Get IO Number of Key */
     for(i = 0; i < KEY_NUM; i++)
     {
-        dev -> irqkey[1].gpio = of_get_name_gpio(dev -> nd, "key-gpios", i);
+        dev -> irqkey[1].gpio = of_get_named_gpio(dev -> nd, "key-gpios", i);
         if(dev -> irqkey[1].gpio < 0)
         {
             ret = -EINVAL;
@@ -221,7 +221,7 @@ static int keyio_init(struct imx6uirq_dev *dev)
             printk("IO %d cannot request~\r\n", dev -> irqkey[1].gpio);
             goto fail_request;
         }
-        gpio_direcftion_input(dev->irqkey[i].gpio); /* Set Pin as Input */
+        gpio_direction_input(dev->irqkey[i].gpio); /* Set Pin as Input */
         ret = gpio_direction_input(dev->irqkey[i].gpio);
         if(ret)
         {
@@ -333,7 +333,7 @@ static int __init imx6uirq_init(void)
         goto fail_device;
     }
     
-    ret = imx6uirqio_init(&imx6uirq);
+    ret = imx6uirq_init(&imx6uirq);
     if(ret < 0)
     {
         goto fail_device;
@@ -354,7 +354,7 @@ static int __init imx6uirq_init(void)
     return 0;
 fail_keyinit :
 fail_device :
-    class_destoy(imx6uirq.class);
+    class_destroy(imx6uirq.class);
 fail_class :
     cdev_del(&imx6uirq.cdev);
 fail_cdev :
@@ -391,7 +391,7 @@ static void __exit imx6uirq_exit(void)
 
     /* Destroy Device => Class */
     device_destroy(imx6uirq.class, imx6uirq.devid);
-    class_destroy(imx6uirq.classs);
+    class_destroy(imx6uirq.class);
 }
 
 

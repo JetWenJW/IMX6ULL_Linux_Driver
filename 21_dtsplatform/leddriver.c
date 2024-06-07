@@ -43,7 +43,7 @@ struct gpioled_dev
     struct cdev cdev;       /* For Char Device     */
     struct device *device;  /* For Device          */
     struct class *class;    /* For class Function  */
-    struct device_node *nd  /* Device Node         */
+    struct device_node *nd; /* Device Node         */
     int led_gpio;           /* IO Number(ID)       */
 };
 
@@ -79,7 +79,7 @@ static ssize_t led_write(struct file *filp, const char __user *buf, size_t count
     {
         gpio_set_value(dev -> led_gpio, 0);
     }
-    else if(datdbuf[0] == LEDOFF)
+    else if(databuf[0] == LEDOFF)
     {
         gpio_set_value(dev -> led_gpio, 1);
     }
@@ -92,8 +92,8 @@ static const struct file_operations led_fops =
 {
     .owner   = THIS_MODULE,             /* The owner of This file */
     .open    = led_open,                /* Device Open file       */
-    .release = led_release              /* Device Close file      */
-    .write   = led_write                /* Device Write file      */
+    .release = led_release,             /* Device Close file      */
+    .write   = led_write,               /* Device Write file      */
 };
 /* Step4. Code Led Probe Functions (When Device & Driver matched this function will be called) */
 static int led_probe(struct platform_device *dev)
@@ -145,7 +145,7 @@ static int led_probe(struct platform_device *dev)
     gpioled.device = device_create(gpioled.class, NULL, gpioled.devid, NULL, GPIOLED_NAME);
     if(IS_ERR(gpioled.device))
     {
-        ret = PTR_ERR(gpiolde.device);
+        ret = PTR_ERR(gpioled.device);
         goto fail_devices;
     }
 
@@ -200,11 +200,11 @@ static int led_probe(struct platform_device *dev)
 
 fail_setoutput :
     gpio_free(gpioled.led_gpio);
-fail_rs ;
+fail_rs :
 fail_find_node :
     device_destroy(gpioled.class, gpioled.devid);
-fail_device :
-    class_destoy(gpioled.class);
+fail_devices :
+    class_destroy(gpioled.class);
 fail_class :
     cdev_del(&gpioled.cdev);
 fail_cdev :
@@ -225,7 +225,7 @@ static int led_remove(struct platform_device *dev)
 
     /* Destroy Device => Class */
     device_destroy(gpioled.class, gpioled.devid);
-    class_destroy(gpioled.classs);
+    class_destroy(gpioled.class);
 
     /* Free The IO we just Request */
     gpio_free(gpioled.led_gpio);

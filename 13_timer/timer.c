@@ -67,12 +67,12 @@ static long timer_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     switch(cmd)
     {
         case CLOSE_CMD : 
-            del_timer_sync(& dev -> timer);/* Delete Timer */
+            del_timer_sync(& dev -> tmr);/* Delete Timer */
             break;
 
         case OPEN_CMD : 
             /* Restart Timer, it'll call this function when timer expired */
-            mod_timer(&dev -> timer, jiffies + msecs_to_jiffies(dev->timerperiod));
+            mod_timer(&dev -> tmr, jiffies + msecs_to_jiffies(dev->timerperiod));
             break;
 
         case SETPERIOD_CMD : 
@@ -82,7 +82,7 @@ static long timer_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                 return -EFAULT;
             }
             dev->timerperiod = value;
-            mod_timer(&dev -> timer, jiffies + msecs_to_jiffies(dev->timerperiod));
+            mod_timer(&dev -> tmr, jiffies + msecs_to_jiffies(dev->timerperiod));
             break;
     }
     return ret;
@@ -111,7 +111,7 @@ static void timer_func(unsigned long arg)
     gpio_set_value(dev -> led_gpio, stat);
 
     /* Restart Timer, it'll call this function when timer expired */
-    mod_timer(&dev -> timer, jiffies + msecs_to_jiffies(dev->timerperiod));
+    mod_timer(&dev -> tmr, jiffies + msecs_to_jiffies(dev->timerperiod));
 }
 
 /* LED IO Initial */
@@ -120,32 +120,32 @@ int led_init(struct timer_dev timer)
     int ret = 0;
 
     /* A. Find IO Node Path */
-    dev -> nd = of_find_node_by_path("/gpioled");
-    if(dev -> nd == NULL)
+    timer.nd = of_find_node_by_path("/gpioled");
+    if(timer.nd == NULL)
     {
         ret = -EINVAL;
         goto fail_find_node;
     }
     
     /* B. Get Device Node */
-    dev -> led_gpio = of_get_named_gpio(dev -> nd, "led-gpios", 0);
-    if(dev -> led_gpio < 0)
+    timer.led_gpio = of_get_named_gpio(timer.nd, "led-gpios", 0);
+    if(timer.led_gpio < 0)
     {
         ret = -EINVAL;
         goto fail_gpio;
     }
     
     /* C. IO request to Use */
-    ret = gpio_request(dev->led_gpio, "led");
+    ret = gpio_request(timer.led_gpio, "led");
     if(ret)
     {
         ret = -EBUSY;
-        printk("IO %d Cannot Request~\r\n", dev -> led_gpio);
+        printk("IO %d Cannot Request~\r\n", timer.led_gpio);
         goto fail_request;
     }
     
     /* D. Set IO Direction */
-    ret = gpio_direction_output(dev -> led_gpio, 1);    /* Default LED OFF */
+    ret = gpio_direction_output(timer.led_gpio, 1);    /* Default LED OFF */
     if(ret < 0)
     {
         ret = -EINVAL;
@@ -155,7 +155,7 @@ int led_init(struct timer_dev timer)
     return 0;
 
 fail_gpio_set :
-    gpio_free(dev -> led_gpio);
+    gpio_free(timer.led_gpio);
 fail_request :
 fail_gpio :
 fail_find_node : 
@@ -224,7 +224,7 @@ static int __init timer_init(void)
 
     /* 6. S/W Timer Initial */
 
-    ret = led_init(&timer);               /* Must Earlier than Timer Initial */
+    ret = led_init(timer);               /* Must Earlier than Timer Initial */
     if(ret < 0)
     {
         goto fail_led_init;
@@ -243,7 +243,7 @@ static int __init timer_init(void)
 
 fail_led_init :
 fail_device :
-    class_destoy(timer.class);
+    class_destroy(timer.class);
 fail_class :
     cdev_del(&timer.cdev);
 fail_cdev :
@@ -267,7 +267,7 @@ static void __exit timer_exit(void)
 
     /* Destroy Device => Class */
     device_destroy(timer.class, timer.devid);
-    class_destroy(timer.classs);
+    class_destroy(timer.class);
 
     /* Reliase IO */
     gpio_free(timer.led_gpio);

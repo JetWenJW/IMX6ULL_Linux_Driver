@@ -46,31 +46,31 @@ static struct resource led_resource[] =
         {
             .start = CCM_CCGR1_BASE,
             .end   = CCM_CCGR1_BASE + REGISTER_LENGTH -1,
-            .flags = IORESOURCE_MEN,
+            .flags = IORESOURCE_MEM,
         },
     [1] =
         {
             .start = SW_MUX_GPIO1_IO03_BASE,
             .end   = SW_MUX_GPIO1_IO03_BASE + REGISTER_LENGTH -1,
-            .flags =IORESOURCE_MEN,
+            .flags =IORESOURCE_MEM,
         },    
     [2] =
         {
             .start = SW_PAD_GPIO1_IO03_BASE,
             .end   = SW_PAD_GPIO1_IO03_BASE + REGISTER_LENGTH -1,
-            .flags = IORESOURCE_MEN,
+            .flags = IORESOURCE_MEM,
         },    
     [3] =
         {
             .start = GPIO1_DR_BASE,
             .end   = GPIO1_DR_BASE + REGISTER_LENGTH -1,
-            .flags = IORESOURCE_MEN,
+            .flags = IORESOURCE_MEM,
         },     
     [4] =
         {
             .start = GPIO1_GDIR_BASE,
             .end   = GPIO1_GDIR_BASE + REGISTER_LENGTH -1,
-            .flags = IORESOURCE_MEN,
+            .flags = IORESOURCE_MEM,
         },
 };
 
@@ -91,13 +91,13 @@ static struct platform_device leddevice =
 static int __init leddevice_init(void)
 {
     /* Registry Platform Device */
-    return platform_device_register(&ledddevice);
+    return platform_device_register(&leddevice);
 }
 
 /* 1. Unload Device */
 static void __exit leddevice_exit(void)
 {
-    platform_device_unregister(&ledddevice);
+    platform_device_unregister(&leddevice);
 }
 
 module_init(leddevice_init);

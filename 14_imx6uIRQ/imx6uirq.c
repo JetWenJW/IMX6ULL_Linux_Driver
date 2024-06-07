@@ -90,7 +90,7 @@ static ssize_t imx6uirq_read(struct file *filp, const char __user *buf, size_t c
 
     if(releasekey)/* Valid KEY */
     {
-        if(keyvlaue & 0x80)
+        if(keyvalue & 0x80)
         {
             keyvalue &= ~(0x80);
             ret = copy_to_user(buf, &keyvalue, sizeof(keyvalue));
@@ -171,7 +171,7 @@ static int keyio_init(struct imx6uirq_dev *dev)
     /* A_2. Get IO Number of Key */
     for(i = 0; i < KEY_NUM; i++)
     {
-        dev -> irqkey[1].gpio = of_get_name_gpio(dev -> nd, "key-gpios", i);
+        dev -> irqkey[1].gpio = of_get_named_gpio(dev -> nd, "key-gpios", i);
         if(dev -> irqkey[1].gpio < 0)
         {
             ret = -EINVAL;
@@ -192,7 +192,7 @@ static int keyio_init(struct imx6uirq_dev *dev)
             printk("IO %d cannot request~\r\n", dev -> irqkey[1].gpio);
             goto fail_request;
         }
-        gpio_direcftion_input(dev->irqkey[i].gpio); /* Set Pin as Input */
+        gpio_direction_input(dev->irqkey[i].gpio); /* Set Pin as Input */
         ret = gpio_direction_input(dev->irqkey[i].gpio);
         if(ret)
         {
@@ -254,11 +254,11 @@ static int __init imx6uirq_init(void)
     if(imx6uirq.major)   /* Assign Device ID */
     {
         imx6uirq.devid = MKDEV(imx6uirq.major, 0);
-        ret = register_chrdev_region(imx6uirq.devid, imx6uirq_CNT, imx6uirq_NAME);
+        ret = register_chrdev_region(imx6uirq.devid, IMX6UIRQ_CNT, IMX6UIRQ_NAME);
     }
     else                /* Unassigned Device ID */
     {
-        ret = alloc_chrdev_region(&imx6uirq.devid, 0, imx6uirq_CNT, imx6uirq_NAME);
+        ret = alloc_chrdev_region(&imx6uirq.devid, 0, IMX6UIRQ_CNT, IMX6UIRQ_NAME);
         imx6uirq.major = MAJOR(imx6uirq.devid);
         imx6uirq.minor = MINOR(imx6uirq.devid);
     }
@@ -275,7 +275,7 @@ static int __init imx6uirq_init(void)
     cdev_init(&imx6uirq.cdev, &imx6uirq_fops);
 
     /* 3.Add Chardev to Kernel */
-    ret = cdev_add(&imx6uirq.cdev, imx6uirq.devid, imx6uirq_CNT);
+    ret = cdev_add(&imx6uirq.cdev, imx6uirq.devid, IMX6UIRQ_CNT);
 
     /* Fail Cdev Add */
     if(ret < 0)
@@ -283,7 +283,7 @@ static int __init imx6uirq_init(void)
         goto fail_cdev;
     }
     /* 4.Add Device class */
-    imx6uirq.class = class_create(THIS_MODULE, imx6uirq_NAME);
+    imx6uirq.class = class_create(THIS_MODULE, IMX6UIRQ_NAME);
     if(IS_ERR(imx6uirq.class))
     {
         ret = PTR_ERR(imx6uirq.class);
@@ -291,14 +291,14 @@ static int __init imx6uirq_init(void)
     }
 
     /* 5.Create Device */
-    imx6uirq.device = device_create(imx6uirq.class, NULL, imx6uirq.devid, NULL, imx6uirq_NAME);
+    imx6uirq.device = device_create(imx6uirq.class, NULL, imx6uirq.devid, NULL, IMX6UIRQ_NAME);
     if(IS_ERR(imx6uirq.device))
     {
         ret = PTR_ERR(imx6uirq.device);
         goto fail_device;
     }
     
-    ret = imx6uirqio_init(&imx6uirq);
+    ret = imx6uirq_init(&imx6uirq);
     if(ret < 0)
     {
         goto fail_device;
@@ -319,11 +319,11 @@ static int __init imx6uirq_init(void)
     return 0;
 fail_keyinit :
 fail_device :
-    class_destoy(imx6uirq.class);
+    class_destroy(imx6uirq.class);
 fail_class :
     cdev_del(&imx6uirq.cdev);
 fail_cdev :
-    unregister_chrdev_region(imx6uirq.devid, imx6uirq_CNT);
+    unregister_chrdev_region(imx6uirq.devid, IMX6UIRQ_CNT);
 fail_devid :
     return ret;
 }
@@ -352,11 +352,11 @@ static void __exit imx6uirq_exit(void)
 
     /* Unregistry Chrdev */
     cdev_del(&imx6uirq.cdev);
-    unregister_chrdev_region(imx6uirq.devid, imx6uirq_CNT);
+    unregister_chrdev_region(imx6uirq.devid, IMX6UIRQ_CNT);
 
     /* Destroy Device => Class */
     device_destroy(imx6uirq.class, imx6uirq.devid);
-    class_destroy(imx6uirq.classs);
+    class_destroy(imx6uirq.class);
 }
 
 
