@@ -31,7 +31,7 @@ struct gpioled_dev
     struct cdev cdev;       /* For Char Device                 */
     struct device *device;  /* For Device                      */
     struct class *class;    /* For class Function              */
-    struct device_node *nd  /* Device Node                     */
+    struct device_node *nd; /* Device Node                     */
     int led_gpio;           /* IO Number(ID)                   */
 
     int dev_status;         /* SpinLock, 0:allow/ 1:forbid     */
@@ -49,16 +49,16 @@ static int led_open(struct inode *inode, struct file *filp)
     spin_lock_irqsave(&gpioled.lock, irqflag);          /* Lock SpinLock in Interrupt Mode */
 
     /* Data Protection */
-    if(gpioled.lock)              /* Not allow to access */
+    if(gpioled.dev_status)              /* Not allow to access */
     {
         spin_unlock(&gpioled.lock);
         return -EBUSY;
     }
-    gpioled.lock++;               /* Has Already used    */
+    gpioled.dev_status++;               /* Has Already used    */
 
     /* Unlock */
     //spin_unlock(&gpioled.lock);
-    spin_unlock_irqstore(&gpioled.lock, irqflag);       /* Unlock SpinLock in Interrupt Mode */
+    spin_unlock_irqrestore(&gpioled.lock, irqflag);       /* Unlock SpinLock in Interrupt Mode */
 
     return 0;
 }
@@ -72,14 +72,14 @@ static int led_release(struct inode *inode, struct file *filp)
     //spin_lock(&dev -> lock);
     spin_lock_irqsave(&dev -> lock, irqflag);          /* Lock SpinLock in Interrupt Mode */
 
-    if(dev -> lock)
+    if(dev->dev_status)
     {
-        dev -> lock--;            /* Hasn't used           */
+        dev->dev_status--;            /* Hasn't used           */
     }
 
     /* Unlock */
     //spin_unlock(&dev -> lock);
-    spin_unlock_irqstore(&dev -> lock, irqflag);       /* Unlock SpinLock in Interrupt Mode */
+    spin_unlock_irqrestore(&dev -> lock, irqflag);       /* Unlock SpinLock in Interrupt Mode */
 
 
     return 0;
@@ -103,7 +103,7 @@ static ssize_t led_write(struct file *filp, const char __user *buf, size_t count
     {
         gpio_set_value(dev -> led_gpio, 0);
     }
-    else if(datdbuf[0] == LEDOFF)
+    else if(databuf[0] == LEDOFF)
     {
         gpio_set_value(dev -> led_gpio, 1);
     }
@@ -116,8 +116,8 @@ static const struct file_operations led_fops =
 {
     .owner   = THIS_MODULE,             /* The owner of This file */
     .open    = led_open,                /* Device Open file       */
-    .release = led_release              /* Device Close file      */
-    .write   = led_write                /* Device Write file      */
+    .release = led_release,             /* Device Close file      */
+    .write   = led_write,               /* Device Write file      */
 };
 
 /* Entry Point Function */
@@ -173,7 +173,7 @@ static int __init gpioled_init(void)
     gpioled.device = device_create(gpioled.class, NULL, gpioled.devid, NULL, GPIOLED_NAME);
     if(IS_ERR(gpioled.device))
     {
-        ret = PTR_ERR(gpiolde.device);
+        ret = PTR_ERR(gpioled.device);
         goto fail_devices;
     }
     
@@ -220,11 +220,11 @@ static int __init gpioled_init(void)
 
 fail_setoutput :
     gpio_free(gpioled.led_gpio);
-fail_rs ;
+fail_rs :
 fail_find_node :
     device_destroy(gpioled.class, gpioled.devid);
-fail_device :
-    class_destoy(gpioled.class);
+fail_devices :
+    class_destroy(gpioled.class);
 fail_class :
     cdev_del(&gpioled.cdev);
 fail_cdev :
@@ -245,7 +245,7 @@ static void __exit gpioled_exit(void)
 
     /* Destroy Device => Class */
     device_destroy(gpioled.class, gpioled.devid);
-    class_destroy(gpioled.classs);
+    class_destroy(gpioled.class);
 
     /* Free The IO we just Request */
     gpio_free(gpioled.led_gpio);

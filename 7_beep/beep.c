@@ -22,13 +22,13 @@
 
 struct beep_dev 
 {
-    dev_t devid;            /* Device ID           */
-    int major;              /* Major Device ID     */
-    int minor;              /* minot Device ID     */
-    struct cdev cdev;       /* For Char Device     */
-    struct device *device;  /* For Device          */
-    struct class *class;    /* For class Function  */
-    struct device_node *nd  /* Device Node         */
+    dev_t devid;             /* Device ID           */
+    int major;               /* Major Device ID     */
+    int minor;               /* minot Device ID     */
+    struct cdev cdev;        /* For Char Device     */
+    struct device *device;   /* For Device          */
+    struct class *class;     /* For class Function  */
+    struct device_node *nd;  /* Device Node         */
     int beep_gpio;           /* IO Number(ID)       */
 };
 
@@ -73,10 +73,10 @@ static ssize_t beep_write(struct file *filp, const char __user *buf, size_t coun
 /* Chrdev Operations */
 static const struct file_operations beep_fops =
 {
-    .owner   = THIS_MODULE,             /* The owner of This file */
-    .open    = beep_open,                /* Device Open file       */
-    .release = beep_release              /* Device Close file      */
-    .write   = beep_write                /* Device Write file      */
+    .owner   = THIS_MODULE,               /* The owner of This file */
+    .open    = beep_open,                 /* Device Open file       */
+    .release = beep_release,              /* Device Close file      */
+    .write   = beep_write,                /* Device Write file      */
 };
 
 /* Entry Point Function */
@@ -171,11 +171,11 @@ static int __init beep_init(void)
 
 fail_setoutput :
     gpio_free(beep.beep_gpio);
-fail_rs ;
+fail_rs :
 fail_find_node :
     device_destroy(beep.class, beep.devid);
 fail_device :
-    class_destoy(beep.class);
+    class_destroy(beep.class);
 fail_class :
     cdev_del(&beep.cdev);
 fail_cdev :
@@ -196,7 +196,7 @@ static void __exit beep_exit(void)
 
     /* Destroy Device => Class */
     device_destroy(beep.class, beep.devid);
-    class_destroy(beep.classs);
+    class_destroy(beep.class);
 
     /* FREE BEEP GPIO */
     gpio_free(beep.beep_gpio);
