@@ -50,7 +50,7 @@ struct dtsled_dev dtsled;                   /* Led Device */
 /* LED Switch Function */
 static void led_switch(u8 state)
 {
-    u32 value = 0;
+    u32 val = 0;
 
     if(state == LEDON)
     {
@@ -121,14 +121,14 @@ static int __init dtsled_init(void)
     dtsled.major = 0;       /* Kernel Auto Assigned Device ID */
     if(dtsled.major)        /* Define Device ID               */
     {
-        dtsled.devid = MKDEV(dtsmajor, 0);
+        dtsled.devid = MKDEV(dtsled.major, 0);
         ret = register_chrdev_region(dtsled.devid, DTSLED_CNT, DTSLED_NAME);
     }
     else                /* Unassigned Device ID */
     {
-        ret = alloc_chrdev_region(&dtsled.devid, DTSLED_CNT, DTSLED_NAME);
+        ret = alloc_chrdev_region(&dtsled.devid, 0, DTSLED_CNT, DTSLED_NAME);
         dtsled.major = MAJOR(dtsled.devid);
-        dtsled.minor = MINOR(desled.devid);
+        dtsled.minor = MINOR(dtsled.devid);
     }
 
     if(ret < 0)         /* Fail DEVICE ID */
@@ -191,7 +191,7 @@ static int __init dtsled_init(void)
     }
 
     /* A.3 Get Property of Array (The most Important)*/
-    ret = of_property_read_u32_array(dtsled.nd, "reg", regdata, 10)
+    ret = of_property_read_u32_array(dtsled.nd, "reg", regdata, 10);
     if(ret < 0)
     {
         goto fail_rs;
@@ -233,11 +233,11 @@ static int __init dtsled_init(void)
 
     return 0;
 
-fail_rs ;
+fail_rs :
 fail_find_node :
     device_destroy(dtsled.class, dtsled.devid);
 fail_device :
-    class_destoy(dtsled.class);
+    class_destroy(dtsled.class);
 fail_class :
     cdev_del(&dtsled.cdev);
 fail_cdev :
@@ -254,7 +254,7 @@ static void __exit dtsled_exit(void)
     writel(val, GPIO1_DR);
 
     /* Cancel Memory Mapping */
-    iounmap(CCM_CCGR1);
+    iounmap(IMX6U_CCM_CCGR1);
     iounmap(SW_MUX_GPIO1_IO03);
     iounmap(SW_PAD_GPIO1_IO03);
     iounmap(GPIO1_GDIR);
@@ -270,7 +270,7 @@ static void __exit dtsled_exit(void)
     device_destroy(dtsled.class, dtsled.devid);
 
     /* Destroy Class */
-    class_destoy(dtsled.class);
+    class_destroy(dtsled.class);
 
 }
 

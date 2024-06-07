@@ -11,7 +11,7 @@
 
 static char readbuffer[100];                /* Read Buffer              */
 static char writebuffer[100];               /* Write Buffer             */
-static char kerneldata = {"kelnel Data"};
+static char kerneldata[] = {"kelnel Data"};
 
 
 
@@ -31,7 +31,7 @@ static ssize_t chardevbase_read(struct file *filp, __user char *buf, size_t coun
 {
     int ret = 0;
     //printk("chardevbase read\r\n");
-    memcpy(readbuffer, kerneldata, sizrof(kerneldata));
+    memcpy(readbuffer, kerneldata, sizeof(kerneldata));
     copy_to_user(buf, readbuffer, count);
 
     if(ret == 0)

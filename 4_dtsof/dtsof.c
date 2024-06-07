@@ -32,8 +32,8 @@ static int __init dtsof_init(void)
     }
     
     /* 1.1 Get Property of Node */
-    comppor = of_find_property(bl_nd, "compatible", NULL);
-    if(comppor == NULL)                           /* Fail to find Backlight Node */
+    comppro = of_find_property(bl_nd, "compatible", NULL);
+    if(comppro == NULL)                           /* Fail to find Backlight Node */
     {
         ret = -EINVAL;
         goto fail_findpro;

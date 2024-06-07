@@ -33,15 +33,15 @@ static void led_switch(u8 state)
 
     if(state == LEDON)
     {
-        val = readl(GPIO1_DR);
-        val &= ~(1 << 3);             /* LED ON LED */
-        writel(val, GPIO1_DR);
+        value = readl(GPIO1_DR);
+        value &= ~(1 << 3);             /* LED ON LED */
+        writel(value, GPIO1_DR);
     }
     else if(state == LEDOFF)
     {
-        val = readl(GPIO1_DR);
-        val |= (1 << 3);              /* LED OFF LED */
-        writel(val, GPIO1_DR);
+        value = readl(GPIO1_DR);
+        value |= (1 << 3);              /* LED OFF LED */
+        writel(value, GPIO1_DR);
     }
 }
 
@@ -77,17 +77,17 @@ static ssize_t led_write(struct file *filp, const char __user *buf, size_t count
 /* Char Device Operations */
 static const struct file_operations led_fops =
 {
-    .owner  = THIS_MODULE,
-    .write  = led_write,
-    .open   = led_open,
-    .close  = led_release 
+    .owner    = THIS_MODULE,
+    .write    = led_write,
+    .open     = led_open,
+    .release  = led_release 
 };
 
 /* Entry */
 static int  __init led_init(void)
 {
     int ret = 0;
-    unsigned int val = 0
+    unsigned int val = 0;
     /* LED Initial (Memory Mapping )*/
     IMX6U_CCM_CCGR1     = ioremap(CCM_CCGR1_BASE, 4);
     SW_MUX_GPIO1_IO03   = ioremap(SW_MUX_GPIO1_IO03_BASE, 4);

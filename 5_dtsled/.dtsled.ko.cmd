@@ -1,0 +1,1 @@
+cmd_/home/jet/Desktop/IMX6ULL_Linux_Driver/5_dtsled/dtsled.ko := /home/jet/Downloads/gccToolchain_7.7.5/bin/arm-linux-gnueabihf-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/jet/Desktop/IMX6ULL_Linux_Driver/5_dtsled/dtsled.ko /home/jet/Desktop/IMX6ULL_Linux_Driver/5_dtsled/dtsled.o /home/jet/Desktop/IMX6ULL_Linux_Driver/5_dtsled/dtsled.mod.o
