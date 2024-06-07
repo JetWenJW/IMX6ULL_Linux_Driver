@@ -56,7 +56,7 @@ struct ft5426_dev
 struct ft5426_dev ft5426;
 
 /* Step8. Read Muilti Bytes FT5426 Register Value */
-static int ft5426_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len)
+static int ft5426_read_regs(struct ft5426_dev *dev, u8 reg, void *val, int len)
 {
     int ret = 0;
     struct i2c_msg msg[2];
@@ -90,7 +90,7 @@ static int ft5426_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len)
 }
 
 /* Step8_1 Write Muilti Bytes FT5426 Register Value */
-static int ft5426_write_regs(struct inode *inode, struct file *filp, u8 reg, u8 *buf, u8 len)
+static int ft5426_write_regs(struct ft5426_dev *dev, struct file *filp, u8 reg, u8 *buf, u8 len)
 {
     u8 buffer[256];
     struct i2c_msg msg[2];
@@ -238,15 +238,15 @@ static int ft5426_ts_irq(struct i2c_client *client, struct ft5426_dev *dev)
 }
 
 /* Step5. Probe Function(this Function will be called when matched) */
-static int ft5426_probe(struct i2c_client *client, cinst struct i2c_device_id *id)
+static int ft5426_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {   
     int ret = 0;
     //int val = 0   /* Just for Test */
     ft5426.client = client;
 
     /* Get IRQ & Reset Pin */
-    ft5426.irq_pin = of_get_name_gpio(client->dev.of_node, "interrupt-gpios", 0);
-    ft5426.reset_pin = of_get_name_gpio(client->dev.of_node, "reset-gpios", 0);
+    ft5426.irq_pin = of_get_named_gpio(client->dev.of_node, "interrupt-gpios", 0);
+    ft5426.reset_pin = of_get_named_gpio(client->dev.of_node, "reset-gpios", 0);
 
     ret = ft5426_ts_reset(client, &ft5426);   /* Initial FT5426 Reset Pin */
     if(ret < 0)
@@ -326,10 +326,10 @@ static struct i2c_driver ft5426_driver =
     {
         .name           = "edt_ft5426",
         .owner          = THIS_MODULE,
-        .of_match_table = of_match_ptr(ft5426_of_match);
+        .of_match_table = of_match_ptr(&ft5426_of_match),
     },
 
-    .id_table = ft5426_id;
+    .id_table = ft5426_id,
 };
 
 /* Step1. Entry Point Function */

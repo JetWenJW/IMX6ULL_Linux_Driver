@@ -58,7 +58,7 @@ struct icm20608_dev
 	signed int accel_x_act;		
 	signed int accel_y_act;		
 	signed int accel_z_act;		
-	signed int temp_act;
+	signed int temp_adc;
 };
 
 struct icm20608_dev icm20608;       /* Decalre Structure */
@@ -76,7 +76,7 @@ static int icm20608_read_regs(struct icm20608_dev *dev, u8 reg, void *buf, int l
 }
 
 /* SPI Write Function(This Function Provide by Kernel) */
-static int icm20608_write_regs(icm20608_dev *dev, u8 reg, u8 *buf, int len)
+static int icm20608_write_regs(struct icm20608_dev *dev, u8 reg, u8 *buf, int len)
 {
     u8 *txdata;
     struct spi_device *spi = (struct spi_device *)dev->peivate_data;
@@ -94,7 +94,7 @@ static int icm20608_write_regs(icm20608_dev *dev, u8 reg, u8 *buf, int len)
 static unsigned char icm20608_read_onereg(struct icm20608_dev *dev, u8 reg)
 {
     u8 data = 0;
-    icm20608_read_regs(dev, reg, *data, 1);
+    icm20608_read_regs(dev, reg, &data, 1);
     return data;
 }
 
@@ -134,20 +134,20 @@ void icm20608_reginit(struct icm20608_dev *dev)
     value = icm20608_read_onereg(dev, ICM20_WHO_AM_I);
     printk("ICM20608 ID = %#X\r\n", value);
 
-    icm20608_write_onereg(&icm20608dev, ICM20_SMPLRT_DIV,    0x00); 	
-	icm20608_write_onereg(&icm20608dev, ICM20_GYRO_CONFIG,   0x18); 	/* gyro ±2000dps  				           */
-	icm20608_write_onereg(&icm20608dev, ICM20_ACCEL_CONFIG,  0x18); 	/* accelerater ±16G   					   */
-	icm20608_write_onereg(&icm20608dev, ICM20_CONFIG,        0x04); 	/* gyro low-pass filter BW = 20Hz 	       */
-	icm20608_write_onereg(&icm20608dev, ICM20_ACCEL_CONFIG2, 0x04); 	/* accelerater low-pass filter BW = 21.2Hz */
-	icm20608_write_onereg(&icm20608dev, ICM20_PWR_MGMT_2,    0x00); 	/* Open all axis of accelerater & gyro     */
-	icm20608_write_onereg(&icm20608dev, ICM20_LP_MODE_CFG,   0x00); 	/* Close Low Power */						   
-	icm20608_write_onereg(&icm20608dev, ICM20_FIFO_EN,       0x00);		/* Close FIFO						       */
+    icm20608_write_onereg(&icm20608, ICM20_SMPLRT_DIV,    0x00); 	
+	icm20608_write_onereg(&icm20608, ICM20_GYRO_CONFIG,   0x18); 	/* gyro ±2000dps  				           */
+	icm20608_write_onereg(&icm20608, ICM20_ACCEL_CONFIG,  0x18); 	/* accelerater ±16G   					   */
+	icm20608_write_onereg(&icm20608, ICM20_CONFIG,        0x04); 	/* gyro low-pass filter BW = 20Hz 	       */
+	icm20608_write_onereg(&icm20608, ICM20_ACCEL_CONFIG2, 0x04); 	/* accelerater low-pass filter BW = 21.2Hz */
+	icm20608_write_onereg(&icm20608, ICM20_PWR_MGMT_2,    0x00); 	/* Open all axis of accelerater & gyro     */
+	icm20608_write_onereg(&icm20608, ICM20_LP_MODE_CFG,   0x00); 	/* Close Low Power 						   */						   
+	icm20608_write_onereg(&icm20608, ICM20_FIFO_EN,       0x00);	/* Close FIFO						       */
 
 }
 
-static struct icm20608_open(struct inode *inode, struct file *filp)
+static int icm20608_open(struct inode *inode, struct file *filp)
 {
-    filp->private_data = &icm20608dev;
+    filp->private_data = &icm20608;
     return 0;
 }
 
@@ -158,12 +158,12 @@ ssize_t icm20608_read(struct file *filp, char __user *buf, size_t cnt, loff_t *o
     struct icm20608_dev *dev = (struct icm20608_dev *)filp->private_data;
 
     icm20608_readdata(dev);
-    data[0] = dev->gyro_x_adc;
-    data[1] = dev->gyro_y_adc;
-    data[2] = dev->gyro_z_adc;
-    data[3] = dev->accel_x_adc;
-    data[4] = dev->accel_y_adc;
-    data[5] = dev->accel_z_adc;
+    data[0] = dev->gyro_x_act;
+    data[1] = dev->gyro_y_act;
+    data[2] = dev->gyro_z_act;
+    data[3] = dev->accel_x_act;
+    data[4] = dev->accel_y_act;
+    data[5] = dev->accel_z_act;
     data[6] = dev->temp_adc;
     err = copy_to_user(buf, data, sizeof(data));
     return 0;
@@ -174,7 +174,7 @@ static int icm20608_release(struct inode *inode, struct file *filp)
     return 0;
 }
 
-static const struct file_operaions icm20608_fops = 
+static const struct file_operations icm20608_fops = 
 {
     .owner   = THIS_MODULE,
     .open    = icm20608_open,
@@ -189,8 +189,8 @@ static int icm20608_probe(struct spi_device *spi)
     printk("icm20608_Probe\r\n");
 
     /* 1. Register Char Device */
-    icm20608dev.major = 0;
-    if(icm20608dev.major)
+    icm20608.major = 0;
+    if(icm20608.major)
     {
         icm20608.devid = MKDEV(icm20608.major, 0);
         ret = register_chrdev_region(icm20608.devid, ICM20608_CNT, ICM20608_NAME);
@@ -199,7 +199,7 @@ static int icm20608_probe(struct spi_device *spi)
     {
         ret = alloc_chrdev_region(&icm20608.devid, 0, ICM20608_CNT, ICM20608_NAME);
         icm20608.major = MAJOR(icm20608.devid);
-        icm20608.monir = MINOR(icm20608.devid);
+        icm20608.minor = MINOR(icm20608.devid);
     }
     if(ret < 0)
     {
@@ -208,25 +208,25 @@ static int icm20608_probe(struct spi_device *spi)
     }
     printk("icm20608 major = %d, monir = %d\r\n", icm20608.major, icm20608.minor);
 
-    icm20608dev.cdev.owner = THIS_MODULE;
+    icm20608.cdev->owner = THIS_MODULE;
     cdev_init(&icm20608.cdev, &icm20608_fops);
-    ret = cdev_add(&icm20608.cdev, icm20608dev.devid, ICM20608_CNT);
+    ret = cdev_add(&icm20608.cdev, icm20608.devid, ICM20608_CNT);
     if(ret < 0)
     {
         goto fail_cdev;
     }
 
-    icm20608dev.class = class_create(THIS_MODULE, ICM20608_NAME);
-    if(IS_ERR(icm20608dev.class))
+    icm20608.class = class_create(THIS_MODULE, ICM20608_NAME);
+    if(IS_ERR(icm20608.class))
     {
-        ret = PTR_ERR(icm20608dev.class);
+        ret = PTR_ERR(icm20608.class);
         goto fail_class;
     }
 
-    icm20608dev.device = device_create(icm20608dev.class, NULL, icm20608dev.device, NULL, ICM20608_NAME);
-    if(IS_ERR(icm20608dev.device))
+    icm20608.device = device_create(icm20608.class, NULL, icm20608.device, NULL, ICM20608_NAME);
+    if(IS_ERR(icm20608.device))
     {
-        ret = PTR_ERR(icm20608dev.device);
+        ret = PTR_ERR(icm20608.device);
         goto fail_device;
     }
 
@@ -236,23 +236,23 @@ static int icm20608_probe(struct spi_device *spi)
     spi_setup(spi);
 
     /* Get SPI Private Data */
-    icm20608dev.private_data = spi;
+    icm20608.private_data = spi;
 
 
     /* ICM20608 Device Initial */
-    icm20608_reginit(&icm20608dev);
+    icm20608_reginit(&icm20608);
 
     return 0;
 
 
 fail_device :
-    class_destroy(icm20608dev.class);
+    class_destroy(icm20608.class);
 
 fail_class :
-    cdev_del(&icm20608dev.cdev);
+    cdev_del(&icm20608.cdev);
 
 fail_cdev : 
-    unregister_chrdev_region(icm20608dev.devid, ICM20608_CNT);
+    unregister_chrdev_region(icm20608.devid, ICM20608_CNT);
 
 fail_devid :
 
@@ -265,15 +265,15 @@ static int icm20608_remove(struct spi_device *spi)
 {
     int ret = 0;
 
-    cdev_del(&icm206058.cdev);
+    cdev_del(&icm20608.cdev);
 
-    unregister_chrdev_region(icm20608dev.devid, ICM20608_CNT);
+    unregister_chrdev_region(icm20608.devid, ICM20608_CNT);
 
-    device_destroy(icm20608.class, icm20608dev.devid);
+    device_destroy(icm20608.class, icm20608.devid);
 
     class_destroy(icm20608.class);
 
-    gpio_free(icm20608dev.cs_gpio);
+    gpio_free(icm20608.cs_gpio);
 
     return ret;
 }
@@ -295,7 +295,7 @@ static const struct of_device_id icm20608_of_match[] =
 };
 
 /* Step2. SPI Driver Structure */
-struct spi_driver icm20608_driver
+struct spi_driver icm20608_driver =
 {
     .probe  = icm20608_probe,
     .remove = icm20608_remove,

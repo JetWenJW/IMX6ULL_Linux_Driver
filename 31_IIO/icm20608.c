@@ -66,8 +66,8 @@ enum inv_icm20608_scan
     .type = _type,                                          \
     .modified = 1,                                          \
     .channel2 = channel2,                                   \
-    .info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE)    \
-    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW)            \
+    .info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),   \
+    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW),           \
         | BIT(IIO_CHAN_INFO_CALIBBIAS),                     \
     .scan_index = _index,                                   \
     .scan_type = {                                          \
@@ -83,8 +83,8 @@ enum inv_icm20608_scan
 static const struct iio_chan_spec icm20608_channels[] =
 {
     /* Temperture */
-    .type = IIO_TEMP;
-    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW)
+    .type = IIO_TEM,
+    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW),
         | BIT(IIO_CHAN_INFO_SCALE) | BIT(IIO_CHAN_INFO_OFFSET),
     .scan_index = INV_ICM20608_SCAN_TEMP,
     .scan_type = 
@@ -180,7 +180,7 @@ static int icm20608_sensor_show(struct icm20608_dev *dev, int reg, int axis, int
     ind = (axis - IIO_MOD_X) * 2;
     result = regmap_bulk_read(dev->regmap, reg + ind, (u8 *)&d, 2);
     if(result)  return -EINVAL;
-    *val = (short)be_16_to_cpup(&d);
+    *val = (short)be16_to_cpup(&d);
 
     return IIO_VAL_INT;
 }
@@ -366,7 +366,7 @@ static int icm20608_write_raw(struct iio_dev *indio_dev,
 
                 case IIO_ACCEL:
                     mutex_lock(&dev->lock);
-                    ret = icm20608_sensor_set(dev, ICM20_XA_OFFSET_H, cahn->channel2, val);
+                    ret = icm20608_sensor_set(dev, ICM20_XA_OFFSET_H, chan->channel2, val);
                     mutex_unlock(&dev->lock);
                     break;
 
@@ -515,7 +515,7 @@ static const struct of_device_id icm20608_of_match[] =
 };
 
 /* Step2. SPI Driver Structure */
-struct spi_driver icm20608_driver
+struct spi_driver icm20608_driver =
 {
     .probe  = icm20608_probe,
     .remove = icm20608_remove,

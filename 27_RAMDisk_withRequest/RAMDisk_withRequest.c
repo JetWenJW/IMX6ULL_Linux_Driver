@@ -36,8 +36,8 @@
 /* ramdisk Device Structure */
 struct ramdisk_dev
 {
-    int major;                                      /* majot Device Number */
-    unsigned char *ramdisk;                         /* Simulate Disk Size  */
+    int major;                                      	/* major Device Number */
+    unsigned char *ramdiskbuf;                          /* Simulate Disk Size  */
     struct  gendisk *gendisk;
     struct request_queue *queue;
     spinlock_t lock;
@@ -59,7 +59,7 @@ static void ramdisk_transfer(struct request *req)
     unsigned long start = blk_rq_pos(req) << 9;
     
     /* Data Length of Block Devie Data */
-    unsigned long len = blk_rqcur_bytes(req);
+    unsigned long len = blk_rq_cur_bytes(req);
 
     /* Get the "bio" Data
      * Read : bio store Data that we wanna read from Disk
@@ -69,11 +69,11 @@ static void ramdisk_transfer(struct request *req)
 
     if(rq_data_dir(req) == READ)        /* Read */
     {
-        memcpy(buffer, ramdisk.buffer + start, len);
+        memcpy(buffer, ramdisk.ramdiskbuf + start, len);
     }
     else                                /* Write */
     {
-        memcpy(ramdisk.buffer + start, buffer, len);
+        memcpy(ramdisk.ramdiskbuf + start, buffer, len);
     }
 }
 
@@ -117,7 +117,7 @@ static void ramdisk_release(struct gendisk *disk, fmode_t mode)
  * Such as heads, cylinders, sectors
  * The Archtechture
  */
-struct int ramdisk_getgeo(struct block_device *dev, struct hd_geometry *geo)
+static int ramdisk_getgeo(struct block_device *dev, struct hd_geometry *geo)
 {
     /* Get The Disk Message */
     printk("ramdisk getgeo\r\n");
@@ -136,7 +136,7 @@ static const struct block_device_operations ramdisk_fops =
     .open       = ramdisk_open,
     .release    = ramdisk_release,
     .getgeo     = ramdisk_getgeo,
-}
+};
 
 /* Step1. Entry Point Function */
 static int __init ramdisk_init(void)

@@ -85,7 +85,7 @@ static int ap3216c_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len
 }
 
 /* Step8_1 Write Muilti Bytes AP3216C Register Value */
-static int ap3216c_write_regs(struct inode *inode, struct file *filp, u8 reg, u8 *buf, u8 len)
+static int ap3216c_write_regs(struct ap3216c_dev *dev, struct file *filp, u8 reg, u8 *buf, u8 len)
 {
     u8 buffer[8];
     struct i2c_msg msg[2];
@@ -134,15 +134,15 @@ void ap3216c_readData(struct ap3216c_dev *dev)
     }
     if(buf[0] &0x80)/* Ir & PS data invalid */
     {
-        *dev->ir = 0;
-        *dev->ps = 0;
+        dev->ir = 0;
+        dev->ps = 0;
     }
     else            /* Ir & PS data Valid */
     {
-        *dev->ir = ((unsigned short)buf[1] << 2) | (buf[0] & 0x03);
-        *dev->ps = (((unsigned short)buf[5] & 0x3F) << 4) | (buf[4] & 0x0F);
+        dev->ir = ((unsigned short)buf[1] << 2) | (buf[0] & 0x03);
+        dev->ps = (((unsigned short)buf[5] & 0x3F) << 4) | (buf[4] & 0x0F);
     }
-    *dev->als = ((unsigned short)buf[3] << 8) | buf[2] ;
+    dev->als = ((unsigned short)buf[3] << 8) | buf[2] ;
 }
 
 /* Step7_1 file operation Function */
@@ -153,9 +153,9 @@ static int ap3216c_open(struct inode *inode, struct file *filp)
     unsigned char value = 0;
 
     /* 1. INitial Device AP3216C */
-    ap3216c_write_reg(&ap3216cdev, AP3216C_SYSCONG, 0x4);
+    ap3216c_write_reg(&ap3216cdev, AP3216C_SYSTEMCONG, 0x4);
     mdelay(50);                                     /* Delay 50ms */    
-    ap3216c_write_reg(&ap3216cdev, AP3216C_SYSCONG, 0x3);
+    ap3216c_write_reg(&ap3216cdev, AP3216C_SYSTEMCONG, 0x3);
 
     value = ap3216c_read_reg(&ap3216cdev, AP3216C_SYSTEMCONG);
     printk("AP3216C_SYSTENCONG = %#x\r\n", value);
@@ -211,7 +211,7 @@ static struct of_device_id ap3216c_of_match[] =
 };
 
 /* Step5. Probe Function(this Function will be called when matched) */
-static int ap3216c_probe(struct i2c_client *client, cinst struct i2c_device_id *id)
+static int ap3216c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {   
     int ret = 0;
     /* 5_1.Registry Char Device */
@@ -313,17 +313,17 @@ static struct i2c_driver ap3216c_driver =
     {
         .name           = "ap3216c",
         .owner          = THIS_MODULE,
-        .of_match_table = of_match_ptr(&ap3216c_of_match);
+        .of_match_table = of_match_ptr(&ap3216c_of_match),
     },
 
-    .id_table = ap3216c_id;
+    .id_table = ap3216c_id,
 };
 
 /* Step1. Entry Point Function */
 static int __init ap3216c_init(void)
 {
     int ret = 0;        
-    ret = i2c_add_driver(ap3216c_driver);
+    ret = i2c_add_driver(&ap3216c_driver);
  
     return ret;
 }
