@@ -263,7 +263,7 @@ static int __init imx6uirq_init(void)
 {
     int ret = 0;        /* For Error Happen */
 
-    atomic_set(&imx6uirq.imx6uirqvalue.imx6uirqvalue, INVAimx6uirq);    
+    atomic_set(&imx6uirq.keyvalue, INVAKEY);    
 
     /* 1.Chardev Registry */
     imx6uirq.major = 0;
@@ -292,7 +292,7 @@ static int __init imx6uirq_init(void)
     cdev_init(&imx6uirq.cdev, &imx6uirq_fops);
 
     /* 3.Add Chardev to Kernel */
-    ret = cdev_add(&imx6uirq.cdev, imx6uirq.devid, imx6uirq_CNT);
+    ret = cdev_add(&imx6uirq.cdev, imx6uirq.devid, IMX6UIRQ_CNT);
 
     /* Fail Cdev Add */
     if(ret < 0)
@@ -312,12 +312,6 @@ static int __init imx6uirq_init(void)
     if(IS_ERR(imx6uirq.device))
     {
         ret = PTR_ERR(imx6uirq.device);
-        goto fail_device;
-    }
-    
-    ret = imx6uirq_init(&imx6uirq);
-    if(ret < 0)
-    {
         goto fail_device;
     }
 
@@ -365,7 +359,7 @@ static void __exit imx6uirq_exit(void)
     del_timer_sync(&imx6uirq.timer);
 
     /* imx6uirq OFF When we exit Module */
-    gpio_set_value(imx6uirq.imx6uirq_gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
+    gpio_set_value(imx6uirq.irqkey[0].gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
 
     /* Unregistry Chrdev */
     cdev_del(&imx6uirq.cdev);

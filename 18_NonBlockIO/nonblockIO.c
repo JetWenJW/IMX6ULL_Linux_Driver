@@ -191,10 +191,10 @@ static unsigned int imx6uirq_poll(struct file *filp, struct poll_table_struct * 
 /* Chrdev Operations */
 static const struct file_operations imx6uirq_fops =
 {
-    .owner   = THIS_MODULE,             /* The owner of This file */
-    .open    = imx6uirq_open,           /* Device Open file       */
-    .read    = imx6uirq_read            /* Device Read File       */
-    .poll    = imx6uirq_poll            /* For Polling APP        */
+    .owner   = THIS_MODULE,              /* The owner of This file */
+    .open    = imx6uirq_open,            /* Device Open file       */
+    .read    = imx6uirq_read,            /* Device Read File       */
+    .poll    = imx6uirq_poll,            /* For Polling APP        */
 };
 
 
@@ -334,7 +334,7 @@ static int __init imx6uirq_init(void)
 {
     int ret = 0;        /* For Error Happen */
 
-    atomic_set(&imx6uirq.imx6uirqvalue.imx6uirqvalue, INVAimx6uirq);    
+    atomic_set(&imx6uirq.keyvalue, INVAKEY);    
 
     /* 1.Chardev Registry */
     imx6uirq.major = 0;
@@ -383,12 +383,6 @@ static int __init imx6uirq_init(void)
     if(IS_ERR(imx6uirq.device))
     {
         ret = PTR_ERR(imx6uirq.device);
-        goto fail_device;
-    }
-    
-    ret = imx6uirqio_init(&imx6uirq);
-    if(ret < 0)
-    {
         goto fail_device;
     }
 
@@ -441,7 +435,7 @@ static void __exit imx6uirq_exit(void)
     del_timer_sync(&imx6uirq.timer);
 
     /* imx6uirq OFF When we exit Module */
-    gpio_set_value(imx6uirq.imx6uirq_gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
+    gpio_set_value(imx6uirq.irqkey[0].gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
 
     /* Unregistry Chrdev */
     cdev_del(&imx6uirq.cdev);

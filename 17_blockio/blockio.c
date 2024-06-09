@@ -195,7 +195,7 @@ static void timer_func(unsigned long arg)
      * Because till tjis part of Program refer to key filter
      * completed
      */
-    if(atomic_read(&dev->relesekey))
+    if(atomic_read(&dev->releasekey))
     {
         wake_up(&dev->r_wait);
     }
@@ -295,7 +295,7 @@ static int __init imx6uirq_init(void)
 {
     int ret = 0;        /* For Error Happen */
 
-    atomic_set(&imx6uirq.imx6uirqvalue.imx6uirqvalue, INVAimx6uirq);    
+    atomic_set(&imx6uirq.keyvalue, INVAKEY);    
 
     /* 1.Chardev Registry */
     imx6uirq.major = 0;
@@ -347,13 +347,7 @@ static int __init imx6uirq_init(void)
         goto fail_device;
     }
     
-    ret = imx6uirq_init(&imx6uirq);
-    if(ret < 0)
-    {
-        goto fail_device;
-    }
-
-
+   
     /* IO Initial */
     ret = keyio_init(&imx6uirq);
     if(ret < 0)
@@ -402,7 +396,7 @@ static void __exit imx6uirq_exit(void)
     del_timer_sync(&imx6uirq.timer);
 
     /* imx6uirq OFF When we exit Module */
-    gpio_set_value(imx6uirq.imx6uirq_gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
+    gpio_set_value(imx6uirq.irqkey[0].gpio, 1);      /* Set imx6uirq as High Voltage (OFF) */
 
     /* Unregistry Chrdev */
     cdev_del(&imx6uirq.cdev);

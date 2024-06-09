@@ -1,0 +1,1 @@
+cmd_/home/jet/Desktop/IMX6ULL_Linux_Driver/25_SPI/icm20608.ko := /home/jet/Downloads/gccToolchain_7.7.5/bin/arm-linux-gnueabihf-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/jet/Desktop/IMX6ULL_Linux_Driver/25_SPI/icm20608.ko /home/jet/Desktop/IMX6ULL_Linux_Driver/25_SPI/icm20608.o /home/jet/Desktop/IMX6ULL_Linux_Driver/25_SPI/icm20608.mod.o

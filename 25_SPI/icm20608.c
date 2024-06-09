@@ -67,7 +67,7 @@ struct icm20608_dev icm20608;       /* Decalre Structure */
 static int icm20608_read_regs(struct icm20608_dev *dev, u8 reg, void *buf, int len)
 {
     u8 data = 0;
-    struct spi_device *spi = (struct spi_device *)dev->peivate_data;
+    struct spi_device *spi = (struct spi_device *)dev->private_data;
 
     data = reg | 0x80;
     spi_write_then_read(spi, &data, 1, buf, len);
@@ -79,7 +79,7 @@ static int icm20608_read_regs(struct icm20608_dev *dev, u8 reg, void *buf, int l
 static int icm20608_write_regs(struct icm20608_dev *dev, u8 reg, u8 *buf, int len)
 {
     u8 *txdata;
-    struct spi_device *spi = (struct spi_device *)dev->peivate_data;
+    struct spi_device *spi = (struct spi_device *)dev->private_data;
 
     txdata = kzalloc(len + 1, GFP_KERNEL);
 

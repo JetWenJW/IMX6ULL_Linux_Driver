@@ -133,11 +133,11 @@ static int led_probe(struct platform_device *dev)
 
     /* 2. Memory Mapping (Under this part are the same as Chrdevice )*/
 
-    IMX6U_CCM_CCGR1     = ioremap(ledsource[0]->start, resource_size(ledresource[0]));
-    SW_MUX_GPIO1_IO03   = ioremap(ledsource[1]->start, resource_size(ledresource[1]));
-    SW_PAD_GPIO1_IO03   = ioremap(ledsource[2]->start, resource_size(ledresource[2]));
-    GPIO1_DR            = ioremap(ledsource[3]->start, resource_size(ledresource[3]));
-    GPIO1_GDIR          = ioremap(ledsource[4]->start, resource_size(ledresource[4]));
+    IMX6U_CCM_CCGR1     = ioremap(ledsource[0]->start, resource_size(ledsource[0]));
+    SW_MUX_GPIO1_IO03   = ioremap(ledsource[1]->start, resource_size(ledsource[1]));
+    SW_PAD_GPIO1_IO03   = ioremap(ledsource[2]->start, resource_size(ledsource[2]));
+    GPIO1_DR            = ioremap(ledsource[3]->start, resource_size(ledsource[3]));
+    GPIO1_GDIR          = ioremap(ledsource[4]->start, resource_size(ledsource[4]));
 
     /* 1.2 LED Initial (Set bits) */
     val = readl(IMX6U_CCM_CCGR1);
@@ -145,8 +145,8 @@ static int led_probe(struct platform_device *dev)
     val |= (3 << 26);                           /* Set bit[26:27] */
     writel(val, IMX6U_CCM_CCGR1);
 
-    writel(0x5, SW_MUX_GPIO1_IO03_BASE);        /* Configured GPIO io03 */
-    writel(0x10B0, SW_PAD_GPIO1_IO03_BASE);     /* Set Electronical Property */
+    writel(0x5, SW_MUX_GPIO1_IO03);        /* Configured GPIO io03 */
+    writel(0x10B0, SW_PAD_GPIO1_IO03);     /* Set Electronical Property */
 
     val = readl(GPIO1_GDIR);                    
     val |= (1 << 3);                            /* Set bit 3 = 1,Set as GPIO Output */
@@ -236,17 +236,17 @@ static int led_remove(struct platform_device *dev)
     writel(val, GPIO1_DR);
 
     /* 1.Cancel Memory Mapping */
-    iounmap(CCM_CCGR1_BASE);
-    iounmap(SW_MUX_GPIO1_IO03_BASE);
-    iounmap(SW_PAD_GPIO1_IO03_BASE);
-    iounmap(GPIO1_GDIR_BASE);
-    iounmap(GPIO1_DR_BASE);    
+    iounmap(IMX6U_CCM_CCGR1);
+    iounmap(SW_MUX_GPIO1_IO03);
+    iounmap(SW_PAD_GPIO1_IO03);
+    iounmap(GPIO1_GDIR);
+    iounmap(GPIO1_DR);    
 
     /* 2.Delete Char Device */
     cdev_del(&newchrled.cdev);
 
     /* 3.Unregistry Char Device */
-    unregister_chrdev_region(newchrled.devid, NEWCHRLED_COUNT);
+    unregister_chrdev_region(newchrled.devid, PLATFORMLED_COUNT);
 
     /* 
      * 4.Destroy Device & Class 
@@ -266,7 +266,7 @@ static struct platform_driver led_driver =
     .driver = 
     {
         .name = "imx6ull-led",      /* Use to matched Device & Driver */
-    }
+    },
     .probe = led_probe,             /* If Device_Driver name are matched probe function will be called */
     .remove = led_remove,
 };
@@ -282,13 +282,13 @@ static struct platform_driver led_driver =
 static int __init ledDriver_init(void)
 {
     /* Registry Platform Driver */
-    return platform_driver_register();
+    return platform_driver_register(&led_driver);
 }
 
 /* 1. Unload Driver */
 static void __exit ledDriver_exit(void)
 {
-    platform_driver_unregister();
+    platform_driver_unregister(&led_driver);
 }
 
 module_init(ledDriver_init);
