@@ -90,7 +90,7 @@ static int ft5426_read_regs(struct ft5426_dev *dev, u8 reg, void *val, int len)
 }
 
 /* Step8_1 Write Muilti Bytes FT5426 Register Value */
-static int ft5426_write_regs(struct ft5426_dev *dev, struct file *filp, u8 reg, u8 *buf, u8 len)
+static int ft5426_write_regs(struct ft5426_dev *dev, u8 reg, u8 *buf, u8 len)
 {
     u8 buffer[256];
     struct i2c_msg msg[2];

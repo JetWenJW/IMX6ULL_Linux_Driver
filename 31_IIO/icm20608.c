@@ -27,6 +27,9 @@
 #include <linux/iio/sysfs.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/trigger.h>
+#include <linux/iio/types.h>
+#include <linux/iio/driver.h>
+#include <linux/iio/events.h>
 #include <linux/iio/triggered_buffer.h>
 #include <linux/iio/trigger_consumer.h>
 #include <linux/unaligned/be_byteshift.h>
@@ -62,12 +65,12 @@ enum inv_icm20608_scan
     INV_ICM20608_SCAN_TIMESTAMP,
 };
 
-#define ICM20608_CHAN(_type, channel2, _index){             \
+#define ICM20608_CHAN(_type, _channel2, _index){            \
     .type = _type,                                          \
     .modified = 1,                                          \
-    .channel2 = channel2,                                   \
+    .channel2 = _channel2,                                  \
     .info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),   \
-    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW),           \
+    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW)            \
         | BIT(IIO_CHAN_INFO_CALIBBIAS),                     \
     .scan_index = _index,                                   \
     .scan_type = {                                          \
@@ -83,9 +86,10 @@ enum inv_icm20608_scan
 static const struct iio_chan_spec icm20608_channels[] =
 {
     /* Temperture */
-    .type = IIO_TEM,
-    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW),
-        | BIT(IIO_CHAN_INFO_SCALE) | BIT(IIO_CHAN_INFO_OFFSET),
+    .type = IIO_TEMP,
+    .info_mask_separate = BIT(IIO_CHAN_INFO_RAW)
+        | BIT(IIO_CHAN_INFO_SCALE) 
+		| BIT(IIO_CHAN_INFO_OFFSET),
     .scan_index = INV_ICM20608_SCAN_TEMP,
     .scan_type = 
     {
@@ -432,7 +436,7 @@ static int icm20608_probe(struct spi_device *spi)
 
     dev = iio_priv(indio_dev);          /* Get icm20608_dev head address */
     dev->spi = spi;
-    spi_dev_drvdata(spi, indio_dev);
+    spi_set_drvdata(spi, indio_dev);
 
     /* Mutex Innitial */
     mutex_init(&dev->lock);
@@ -457,7 +461,7 @@ static int icm20608_probe(struct spi_device *spi)
     dev->regmap_config.reg_bits = 8;
     dev->regmap_config.val_bits = 8;
     dev->regmap_config.read_flag_mask = 0x80;
-    dev->regmap = regmap_init_spi(spi, &dev->regmap_config,);
+    dev->regmap = regmap_init_spi(spi, &dev->regmap_config);
     if(IS_ERR(dev->regmap))
     {
         ret = PTR_ERR(dev->regmap);

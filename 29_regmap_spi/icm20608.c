@@ -154,7 +154,7 @@ static int icm20608_release(struct inode *inode, struct file *filp)
     return 0;
 }
 
-static const struct file_operaions icm20608_fops = 
+static const struct file_operations icm20608_fops = 
 {
     .owner   = THIS_MODULE,
     .open    = icm20608_open,
@@ -188,7 +188,7 @@ static int icm20608_probe(struct spi_device *spi)
     }
     printk("icm20608 major = %d, monir = %d\r\n", icm20608.major, icm20608.minor);
 
-    icm20608.cdev.owner = THIS_MODULE;
+    icm20608.cdev->owner = THIS_MODULE;
     cdev_init(&icm20608.cdev, &icm20608_fops);
     ret = cdev_add(&icm20608.cdev, icm20608.devid, ICM20608_CNT);
     if(ret < 0)
@@ -214,7 +214,7 @@ static int icm20608_probe(struct spi_device *spi)
     icm20608.regmap_config.reg_bits = 8;
     icm20608.regmap_config.val_bits = 8;
     icm20608.regmap_config.read_flag_mask = 0x80;
-    icm20608.regmap = regmap_init_spi(spi, &icm20608_dev.regmap_config,);
+    icm20608.regmap = regmap_init_spi(spi, &icm20608.regmap_config);
 
     /* Initial SPI Device Mode(Ex.CPOL,CPHA)*/
     spi->mode = SPI_MODE_0;
@@ -225,19 +225,19 @@ static int icm20608_probe(struct spi_device *spi)
 
 
     /* ICM20608 Device Initial */
-    icm20608_reginit(&icm20608dev);
+    icm20608_reginit(&icm20608);
 
     return 0;
 
 
 fail_device :
-    class_destroy(icm20608dev.class);
+    class_destroy(icm20608.class);
 
 fail_class :
-    cdev_del(&icm20608dev.cdev);
+    cdev_del(&icm20608.cdev);
 
 fail_cdev : 
-    unregister_chrdev_region(icm20608dev.devid, ICM20608_CNT);
+    unregister_chrdev_region(icm20608.devid, ICM20608_CNT);
 
 fail_devid :
 
@@ -252,16 +252,16 @@ static int icm20608_remove(struct spi_device *spi)
 
     cdev_del(&icm20608.cdev);
 
-    unregister_chrdev_region(icm20608dev.devid, ICM20608_CNT);
+    unregister_chrdev_region(icm20608.devid, ICM20608_CNT);
 
-    device_destroy(icm20608.class, icm20608dev.devid);
+    device_destroy(icm20608.class, icm20608.devid);
 
     class_destroy(icm20608.class);
 
-    gpio_free(icm20608dev.cs_gpio);
+    gpio_free(icm20608.cs_gpio);
 
     /* regmap delete */
-    regmap_exit(icm20608_dev.regmap);
+    regmap_exit(icm20608.regmap);
     return ret;
 }
 
@@ -282,7 +282,7 @@ static const struct of_device_id icm20608_of_match[] =
 };
 
 /* Step2. SPI Driver Structure */
-struct spi_driver icm20608_driver
+struct spi_driver icm20608_driver =
 {
     .probe  = icm20608_probe,
     .remove = icm20608_remove,

@@ -85,7 +85,7 @@ static int ap3216c_read_regs(struct ap3216c_dev *dev, u8 reg, void *val, int len
 }
 
 /* Step8_1 Write Muilti Bytes AP3216C Register Value */
-static int ap3216c_write_regs(struct ap3216c_dev *dev, struct file *filp, u8 reg, u8 *buf, u8 len)
+static int ap3216c_write_regs(struct ap3216c_dev *dev, u8 reg, u8 *buf, u8 len)
 {
     u8 buffer[8];
     struct i2c_msg msg[2];
