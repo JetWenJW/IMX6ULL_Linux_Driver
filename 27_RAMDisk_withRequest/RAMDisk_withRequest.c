@@ -109,7 +109,6 @@ static int ramdisk_open(struct block_device *bdev, fmode_t mode)
 static void ramdisk_release(struct gendisk *disk, fmode_t mode)
 {
     printk("ramdisk Release\r\n");
-    return 0;
 }
 
 /* Getgeo Function of Block Device Operations

@@ -203,7 +203,7 @@ static int icm20608_probe(struct spi_device *spi)
         goto fail_class;
     }
 
-    icm20608.device = device_create(icm20608.class, NULL, icm20608.device, NULL, ICM20608_NAME);
+    icm20608.device = device_create(icm20608.class, NULL, icm20608.devid, NULL, ICM20608_NAME);
     if(IS_ERR(icm20608.device))
     {
         ret = PTR_ERR(icm20608.device);

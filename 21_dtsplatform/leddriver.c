@@ -57,7 +57,7 @@ static int led_open(struct inode *inode, struct file *filp)
 
 static int led_release(struct inode *inode, struct file *filp)
 {
-    struct gpioled_dev *dev = (struct gpioled_dev *)filp -> private_data;
+//    struct gpioled_dev *dev = (struct gpioled_dev *)filp -> private_data;
     return 0;
 }
 
@@ -200,7 +200,6 @@ static int led_probe(struct platform_device *dev)
 
 fail_setoutput :
     gpio_free(gpioled.led_gpio);
-fail_rs :
 fail_find_node :
     device_destroy(gpioled.class, gpioled.devid);
 fail_devices :
@@ -229,6 +228,7 @@ static int led_remove(struct platform_device *dev)
 
     /* Free The IO we just Request */
     gpio_free(gpioled.led_gpio);
+	return 0;
 }
 
 /* Step3. Declare an array using to matched Device & Driver */

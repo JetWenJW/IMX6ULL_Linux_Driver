@@ -55,7 +55,7 @@ static int miscbeep_open(struct inode *inode, struct file *filp)
 
 static int miscbeep_release(struct inode *inode, struct file *filp)
 {
-    struct miscbeep_dev *dev = (struct miscbeep_dev *)filp -> private_data;
+//    struct miscbeep_dev *dev = (struct miscbeep_dev *)filp -> private_data;
     return 0;
 }
 

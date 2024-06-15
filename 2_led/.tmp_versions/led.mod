@@ -1,2 +1,2 @@
-/home/jet/Desktop/IMX6ULL_Linux_Driver/2_led/led.ko
-/home/jet/Desktop/IMX6ULL_Linux_Driver/2_led/led.o
+/home/Jet/IMX6ULL_Linux_Driver/2_led/led.ko
+/home/Jet/IMX6ULL_Linux_Driver/2_led/led.o

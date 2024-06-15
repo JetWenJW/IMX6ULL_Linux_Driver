@@ -70,7 +70,7 @@ static int newchrled_open(struct inode *inode, struct file *filp)
 
 static int newchrled_release(struct inode *inode, struct file *filp)
 {
-    struct newchrled_dev *dev = (struct newchrled_dev *)filp -> private_data;
+   // struct newchrled_dev *dev = (struct newchrled_dev *)filp -> private_data;
     return 0;
 }
 
@@ -78,6 +78,8 @@ static ssize_t newchrled_write(struct file *filp, const char __user *buf, size_t
 {
     int retvalue;
     unsigned char databuf[1];
+
+	retvalue = copy_from_user(databuf, buf, count);
     if(retvalue < 0)
     {
         printk("Kernel Write Failed !\r\n");
@@ -102,11 +104,10 @@ static const struct file_operations newchrled_fops =
 static int __init newchrled_init(void)
 {
     int ret = 0;
-    printk("New ChrLed Initial\r\n");
     
     /* 1.Initial LED */
     unsigned int val = 0;
-
+	printk("New ChrLed Initial\r\n");
     /* 1.1 LED Initial (Memory Mapping )*/
     IMX6U_CCM_CCGR1     = ioremap(CCM_CCGR1_BASE, 4);
     SW_MUX_GPIO1_IO03   = ioremap(SW_MUX_GPIO1_IO03_BASE, 4);
@@ -178,7 +179,7 @@ static int __init newchrled_init(void)
 
     /* 4.1Auto assigned Device */
     newchrled.device = device_create(newchrled.class, NULL, 
-                        newchrled.device, NULL, NEWCHRLED_NAME);
+                        newchrled.devid, NULL, NEWCHRLED_NAME);
     if(IS_ERR(newchrled.device))
     {
         ret = PTR_ERR(newchrled.device);
@@ -194,7 +195,7 @@ fail_class :
     cdev_del(&newchrled.cdev);
 
 fail_cdev :
-    unregister_chrdev_region(newchrled.devid, NEWCHRLED_NAME);
+    unregister_chrdev_region(newchrled.devid, NEWCHRLED_COUNT);
 
 fail_devid :
     return ret;
@@ -203,7 +204,7 @@ fail_devid :
 /* Exit Point */
 static void __exit newchrled_exit(void)
 {
-    printk("New ChrLed Fail~\r\n");
+    //printk("New ChrLed Fail~\r\n");
 
     unsigned int val = 0;
     val = readl(GPIO1_DR);
@@ -227,7 +228,7 @@ static void __exit newchrled_exit(void)
      * 4.Destroy Device & Class 
      * NOTE: Device must be destroied earlier than Clsss
      */
-    device_destroy(newchrled.class, newchrled.device);
+    device_destroy(newchrled.class, newchrled.devid);
     class_destroy(newchrled.class);
 
 }

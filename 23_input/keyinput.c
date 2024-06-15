@@ -39,7 +39,7 @@ struct irq_keydesc
     int irqnum;                             /* IRQ Number       */
     unsigned char value;                    /* Key Value        */
     char name[10];                          /* Interrupt name   */                                
-    irqreturn_t (*handler)(int, void *)     /* IRQ Handler      */
+    irqreturn_t (*handler)(int, void *);    /* IRQ Handler      */
 };
 
 
@@ -59,7 +59,6 @@ struct keyinput_dev keyinputdev;            /* struct Declare */
 /* KEY_IRQ Handler */
 static irqreturn_t key0_handler(int irq, void *dev_id)
 {
-    int value = 0;
     struct keyinput_dev *dev = dev_id;
     /*
      * This Part Only need to Enable Timer

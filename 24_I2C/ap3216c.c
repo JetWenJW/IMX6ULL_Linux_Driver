@@ -149,8 +149,8 @@ void ap3216c_readData(struct ap3216c_dev *dev)
 static int ap3216c_open(struct inode *inode, struct file *filp)
 {
     /* Private Data */
-    filp -> private_data = &ap3216cdev;
     unsigned char value = 0;
+	filp -> private_data = &ap3216cdev;
 
     /* 1. INitial Device AP3216C */
     ap3216c_write_reg(&ap3216cdev, AP3216C_SYSTEMCONG, 0x4);
@@ -261,7 +261,7 @@ static int ap3216c_probe(struct i2c_client *client, const struct i2c_device_id *
 
     /* 5_4. Auto assigned Device */
     ap3216cdev.device = device_create(ap3216cdev.class, NULL, 
-                        ap3216cdev.device, NULL, AP3216C_NAME);
+                        ap3216cdev.devid, NULL, AP3216C_NAME);
     if(IS_ERR(ap3216cdev.device))
     {
         ret = PTR_ERR(ap3216cdev.device);
@@ -279,7 +279,7 @@ fail_class :
     cdev_del(&ap3216cdev.cdev);
 
 fail_cdev :
-    unregister_chrdev_region(ap3216cdev.devid, AP3216C_NAME);
+    unregister_chrdev_region(ap3216cdev.devid, AP3216C_CNT);
 
 fail_devid :
     return ret;
@@ -298,7 +298,7 @@ static int ap3216c_remove(struct i2c_client *client)
      * 5_7. Destroy Device & Class 
      * NOTE: Device must be destroied earlier than Clsss
      */
-    device_destroy(ap3216cdev.class, ap3216cdev.device);
+    device_destroy(ap3216cdev.class, ap3216cdev.devid);
     class_destroy(ap3216cdev.class);
     return 0;
 }

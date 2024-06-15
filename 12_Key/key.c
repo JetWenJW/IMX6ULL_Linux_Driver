@@ -43,7 +43,7 @@ static int key_open(struct inode *inode, struct file *filp)
 
 static int key_release(struct inode *inode, struct file *filp)
 {
-    struct key_dev *dev = (struct key_dev *)filp -> private_data;
+//    struct key_dev *dev = (struct key_dev *)filp -> private_data;
     return 0;
 }
 
@@ -54,7 +54,7 @@ static ssize_t key_write(struct file *filp, const char __user *buf, size_t count
     return ret;
 }
 
-static ssize_t key_read(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
+static ssize_t key_read(struct file *filp, char __user *buf, size_t count, loff_t *ppos)
 {
     int ret = 0;
     int value = 0;

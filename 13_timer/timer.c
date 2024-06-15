@@ -55,7 +55,7 @@ static int timer_open(struct inode *inode, struct file *filp)
 
 static int timer_release(struct inode *inode, struct file *filp)
 {
-    struct timer_dev *dev = (struct timer_dev *)filp -> private_data;
+//    struct timer_dev *dev = (struct timer_dev *)filp -> private_data;
     return 0;
 }
 

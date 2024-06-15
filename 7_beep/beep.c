@@ -42,7 +42,7 @@ static int beep_open(struct inode *inode, struct file *filp)
 
 static int beep_release(struct inode *inode, struct file *filp)
 {
-    struct beep_dev *dev = (struct beep_dev *)filp -> private_data;
+//    struct beep_dev *dev = (struct beep_dev *)filp -> private_data;
     return 0;
 }
 
@@ -171,7 +171,6 @@ static int __init beep_init(void)
 
 fail_setoutput :
     gpio_free(beep.beep_gpio);
-fail_rs :
 fail_find_node :
     device_destroy(beep.class, beep.devid);
 fail_device :

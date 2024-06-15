@@ -42,7 +42,7 @@ static int led_open(struct inode *inode, struct file *filp)
 
 static int led_release(struct inode *inode, struct file *filp)
 {
-    struct gpioled_dev *dev = (struct gpioled_dev *)filp -> private_data;
+//    struct gpioled_dev *dev = (struct gpioled_dev *)filp -> private_data;
     return 0;
 }
 
@@ -178,7 +178,6 @@ static int __init gpioled_init(void)
 
 fail_setoutput :
     gpio_free(gpioled.led_gpio);
-fail_rs :
 fail_find_node :
     device_destroy(gpioled.class, gpioled.devid);
 fail_devices :

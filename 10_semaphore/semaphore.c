@@ -193,7 +193,6 @@ static int __init gpioled_init(void)
 
 fail_setoutput :
     gpio_free(gpioled.led_gpio);
-fail_rs :
 fail_find_node :
     device_destroy(gpioled.class, gpioled.devid);
 fail_devices :

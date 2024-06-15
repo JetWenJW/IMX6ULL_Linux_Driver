@@ -1,8 +1,8 @@
-cmd_/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o := /home/jet/Downloads/gccToolchain_7.7.5/bin/arm-linux-gnueabihf-gcc -Wp,-MD,/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/.keyinput.o.d -nostdinc -isystem /home/jet/Downloads/gccToolchain_7.7.5/bin/../lib/gcc/arm-linux-gnueabihf/7.5.0/include -I./arch/arm/include -Iarch/arm/include/generated/uapi -Iarch/arm/include/generated  -Iinclude -I./arch/arm/include/uapi -Iarch/arm/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -std=gnu89 -fno-dwarf2-cfi-asm -fno-ipa-sra -mabi=aapcs-linux -mno-thumb-interwork -mfpu=vfp -funwind-tables -marm -D__LINUX_ARM_ARCH__=6 -march=armv6k -mtune=arm1136j-s -msoft-float -Uarm -fno-delete-null-pointer-checks -O2 --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fno-stack-protector -Wno-unused-but-set-variable -fomit-frame-pointer -fno-var-tracking-assignments -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -DCC_HAVE_ASM_GOTO  -DMODULE  -D"KBUILD_STR(s)=#s" -D"KBUILD_BASENAME=KBUILD_STR(keyinput)"  -D"KBUILD_MODNAME=KBUILD_STR(keyinput)" -c -o /home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/.tmp_keyinput.o /home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.c
+cmd_/home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.o := /home/Jet/gcc_toolchain/gcc_toolchain7.5.0/bin/arm-linux-gnueabihf-gcc -Wp,-MD,/home/Jet/IMX6ULL_Linux_Driver/23_input/.keyinput.o.d -nostdinc -isystem /home/Jet/gcc_toolchain/gcc_toolchain7.5.0/bin/../lib/gcc/arm-linux-gnueabihf/7.5.0/include -I./arch/arm/include -Iarch/arm/include/generated/uapi -Iarch/arm/include/generated  -Iinclude -I./arch/arm/include/uapi -Iarch/arm/include/generated/uapi -I./include/uapi -Iinclude/generated/uapi -include ./include/linux/kconfig.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Werror-implicit-function-declaration -Wno-format-security -std=gnu89 -fno-dwarf2-cfi-asm -fno-ipa-sra -mabi=aapcs-linux -mno-thumb-interwork -mfpu=vfp -funwind-tables -marm -D__LINUX_ARM_ARCH__=6 -march=armv6k -mtune=arm1136j-s -msoft-float -Uarm -fno-delete-null-pointer-checks -O2 --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fno-stack-protector -Wno-unused-but-set-variable -fomit-frame-pointer -fno-var-tracking-assignments -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fconserve-stack -Werror=implicit-int -Werror=strict-prototypes -Werror=date-time -DCC_HAVE_ASM_GOTO  -DMODULE  -D"KBUILD_STR(s)=#s" -D"KBUILD_BASENAME=KBUILD_STR(keyinput)"  -D"KBUILD_MODNAME=KBUILD_STR(keyinput)" -c -o /home/Jet/IMX6ULL_Linux_Driver/23_input/.tmp_keyinput.o /home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.c
 
-source_/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o := /home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.c
+source_/home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.o := /home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.c
 
-deps_/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o := \
+deps_/home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.o := \
   include/linux/module.h \
     $(wildcard include/config/sysfs.h) \
     $(wildcard include/config/modules.h) \
@@ -61,7 +61,7 @@ deps_/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o := \
     $(wildcard include/config/prove/locking.h) \
     $(wildcard include/config/panic/timeout.h) \
     $(wildcard include/config/ring/buffer.h) \
-  /home/jet/Downloads/gccToolchain_7.7.5/lib/gcc/arm-linux-gnueabihf/7.5.0/include/stdarg.h \
+  /home/Jet/gcc_toolchain/gcc_toolchain7.5.0/lib/gcc/arm-linux-gnueabihf/7.5.0/include/stdarg.h \
   include/linux/linkage.h \
   include/linux/stringify.h \
   include/linux/export.h \
@@ -631,6 +631,6 @@ deps_/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o := \
   include/linux/input.h \
   include/uapi/linux/input.h \
 
-/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o: $(deps_/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o)
+/home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.o: $(deps_/home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.o)
 
-$(deps_/home/jet/Desktop/IMX6ULL_Linux_Driver/23_input/keyinput.o):
+$(deps_/home/Jet/IMX6ULL_Linux_Driver/23_input/keyinput.o):

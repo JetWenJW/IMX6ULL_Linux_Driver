@@ -69,7 +69,7 @@ static int imx6uirq_open(struct inode *inode, struct file *filp)
 
 static int imx6uirq_release(struct inode *inode, struct file *filp)
 {
-    struct imx6uirq_dev *dev = (struct imx6uirq_dev *)filp -> private_data;
+//    struct imx6uirq_dev *dev = (struct imx6uirq_dev *)filp -> private_data;
     return 0;
 }
 
@@ -80,7 +80,7 @@ static ssize_t imx6uirq_write(struct file *filp, const char __user *buf, size_t 
     return ret;
 }
 
-static ssize_t imx6uirq_read(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
+static ssize_t imx6uirq_read(struct file *filp, char __user *buf, size_t count, loff_t *ppos)
 {
     int ret = 0;
     
@@ -119,14 +119,15 @@ static const struct file_operations imx6uirq_fops =
 {
     .owner   = THIS_MODULE,             /* The owner of This file */
     .open    = imx6uirq_open,           /* Device Open file       */
-    .read    = imx6uirq_read            /* Device Read File       */
+    .read    = imx6uirq_read,           /* Device Read File       */
+	.release = imx6uirq_release,		/* Device Close File	  */
+	.write   = imx6uirq_write,			/* Device Write File	  */
 };
 
 
 /* KEY_IRQ Handler */
 static irqreturn_t key0_handler(int irq, void *dev_id)
 {
-    int value = 0;
     struct imx6uirq_dev *dev = dev_id;
     /*
      * This Part Only need to Enable Timer

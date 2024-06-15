@@ -1,4 +1,4 @@
-KERNELDIR := /home/jet/Desktop/IMX6ULL_All_Of_The_Porting/linux-imx-rel_imx_4.1.15_2.1.0_ga
+KERNELDIR := /home/Jet/IMX6ULL_All_Of_The_Porting/linux-imx-rel_imx_4.1.15_2.1.0_ga
 
 CURRENT_PATH := $(shell pwd)
 

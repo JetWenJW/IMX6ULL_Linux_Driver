@@ -32,8 +32,7 @@ static ssize_t chardevbase_read(struct file *filp, __user char *buf, size_t coun
     int ret = 0;
     //printk("chardevbase read\r\n");
     memcpy(readbuffer, kerneldata, sizeof(kerneldata));
-    copy_to_user(buf, readbuffer, count);
-
+   	ret =  copy_to_user(buf, readbuffer, count);
     if(ret == 0)
     {
         printk("Kernel Send Data OK!!\r\n");
@@ -45,11 +44,11 @@ static ssize_t chardevbase_read(struct file *filp, __user char *buf, size_t coun
     return 0;
 }
 
-static ssize_t chardevbase_write(struct file *filp, __user char *buf, size_t count, loff_t *ppos)
+static ssize_t chardevbase_write(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
 {
     int ret = 0;
     //printk("chardevbase Write\r\n");
-    copy_from_user(writebuffer, buf, count);
+   	ret =  copy_from_user(writebuffer, buf, count);
     if(ret == 0)
     {
         printk("Kernel Receive Data : %s\r\n", writebuffer);

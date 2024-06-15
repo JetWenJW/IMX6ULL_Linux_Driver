@@ -83,7 +83,7 @@ static int newchrled_open(struct inode *inode, struct file *filp)
 
 static int newchrled_release(struct inode *inode, struct file *filp)
 {
-    struct newchrled_dev *dev = (struct newchrled_dev *)filp -> private_data;
+//    struct newchrled_dev *dev = (struct newchrled_dev *)filp -> private_data;
     return 0;
 }
 
@@ -91,6 +91,8 @@ static ssize_t newchrled_write(struct file *filp, const char __user *buf, size_t
 {
     int retvalue;
     unsigned char databuf[1];
+
+	retvalue = copy_from_user(databuf, buf, count);
     if(retvalue < 0)
     {
         printk("Kernel Write Failed !\r\n");
@@ -203,7 +205,7 @@ static int led_probe(struct platform_device *dev)
 
     /* 4.1Auto assigned Device */
     newchrled.device = device_create(newchrled.class, NULL, 
-                        newchrled.device, NULL, PLATFORMLED_NAME);
+                        newchrled.devid, NULL, PLATFORMLED_NAME);
     if(IS_ERR(newchrled.device))
     {
         ret = PTR_ERR(newchrled.device);
@@ -219,7 +221,7 @@ fail_class :
     cdev_del(&newchrled.cdev);
 
 fail_cdev :
-    unregister_chrdev_region(newchrled.devid, PLATFORMLED_NAME);
+    unregister_chrdev_region(newchrled.devid, PLATFORMLED_COUNT);
 
 fail_devid :
     return ret;
@@ -228,7 +230,7 @@ fail_devid :
 /* Some Resource need to release */
 static int led_remove(struct platform_device *dev)
 {
-    printk("led Driver Remove\r\n");
+    //printk("led Driver Remove\r\n");
 
     unsigned int val = 0;
     val = readl(GPIO1_DR);
@@ -252,7 +254,7 @@ static int led_remove(struct platform_device *dev)
      * 4.Destroy Device & Class 
      * NOTE: Device must be destroied earlier than Clsss
      */
-    device_destroy(newchrled.class, newchrled.device);
+    device_destroy(newchrled.class, newchrled.devid);
     class_destroy(newchrled.class);
 
     return 0;

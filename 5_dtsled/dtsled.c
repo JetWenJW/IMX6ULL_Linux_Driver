@@ -74,13 +74,13 @@ static int dtsled_open(struct inode *inode, struct file *filp)
 
 static int dtsled_release(struct inode *inode, struct file *filp)
 {
-    struct dtsled_dev *dev = (struct dtsle_dev *)filp -> private_data;
+//    struct dtsled_dev *dev = (struct dtsle_dev *)filp -> private_data;
     return 0;
 }
 
 static ssize_t dtsled_write(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
 {
-    struct dtsled_dev *dev = (struct dtsled_dev *)filp -> private_data;
+   // struct dtsled_dev *dev = (struct dtsled_dev *)filp -> private_data;
 
     int retvalue;
     unsigned char databuf[1];
@@ -201,8 +201,7 @@ static int __init dtsled_init(void)
         printk("reg data: \r\n");
         for(i = 0;i < 10; i++)
         {
-            printk("%#X ", i, regdata[i]);
-
+            printk("%#X ", regdata[i]);
         }
         printk("\r\n");    
     }

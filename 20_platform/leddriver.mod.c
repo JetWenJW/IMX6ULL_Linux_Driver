@@ -27,13 +27,15 @@ __attribute__((section("__versions"))) = {
 	{ 0x29537c9e, __VMLINUX_SYMBOL_STR(alloc_chrdev_region) },
 	{ 0xfb961d14, __VMLINUX_SYMBOL_STR(__arm_ioremap) },
 	{ 0x42ed5ca, __VMLINUX_SYMBOL_STR(platform_get_resource) },
+	{ 0xfbc74f64, __VMLINUX_SYMBOL_STR(__copy_from_user) },
+	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
+	{ 0xfa2a45e, __VMLINUX_SYMBOL_STR(__memzero) },
+	{ 0x5dcf6341, __VMLINUX_SYMBOL_STR(outer_cache) },
 	{ 0x495be299, __VMLINUX_SYMBOL_STR(class_destroy) },
 	{ 0xe6e17706, __VMLINUX_SYMBOL_STR(device_destroy) },
 	{ 0x7485e15e, __VMLINUX_SYMBOL_STR(unregister_chrdev_region) },
 	{ 0xb37da9a1, __VMLINUX_SYMBOL_STR(cdev_del) },
 	{ 0xc2165d85, __VMLINUX_SYMBOL_STR(__arm_iounmap) },
-	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
-	{ 0x5dcf6341, __VMLINUX_SYMBOL_STR(outer_cache) },
 	{ 0xefd6cf06, __VMLINUX_SYMBOL_STR(__aeabi_unwind_cpp_pr0) },
 };
 
@@ -43,4 +45,4 @@ __attribute__((section(".modinfo"))) =
 "depends=";
 
 
-MODULE_INFO(srcversion, "F48FF4EEAF4CB6B8469BABA");
+MODULE_INFO(srcversion, "462A42773A01E3003AD16EB");
