@@ -45,6 +45,7 @@ struct ramdisk_dev
 
 struct ramdisk_dev ramdisk;
 
+#if 0
 /* Data transfer proccess */
 static void ramdisk_transfer(struct request *req)
 {
@@ -76,6 +77,7 @@ static void ramdisk_transfer(struct request *req)
         memcpy(ramdisk.ramdiskbuf + start, buffer, len);
     }
 }
+#endif
 
 /* Make Request Functions */
 static void ramdisk_make_request(struct request_queue *queue, struct bio *bio)
@@ -105,29 +107,8 @@ static void ramdisk_make_request(struct request_queue *queue, struct bio *bio)
 
     set_bit(BIO_UPTODATE, &bio->bi_flags);
     bio_endio(bio, 0);
+
 }
-
-#if 0
-/* Request Function */
-static void ramdisk_request_fn(struct request_queue *q)
-{
-    struct request *req;
-    int err = 0;
-
-    req = blk_fetch_request(q);
-    while(req)
-    {
-        ramdisk_transfer(req);
-
-        /* Request Handler (Read/Write Operations) */
-        if(! __blk_end_request_cur(req, err))
-        {
-            req = blk_fetch_request(q);
-        }
-        
-    }
-}
-#endif
 
 /* Open Function of Block Device Operations */
 static int ramdisk_open(struct block_device *bdev, fmode_t mode)
