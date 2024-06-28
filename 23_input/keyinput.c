@@ -109,8 +109,8 @@ static int keyio_init(struct keyinput_dev *dev)
     /* A_2. Get IO Number of Key */
     for(i = 0; i < KEY_NUM; i++)
     {
-        dev -> irqkey[1].gpio = of_get_named_gpio(dev -> nd, "key-gpios", i);
-        if(dev -> irqkey[1].gpio < 0)
+        dev -> irqkey[i].gpio = of_get_named_gpio(dev -> nd, "key-gpios", i);
+        if(dev -> irqkey[i].gpio < 0)
         {
             ret = -EINVAL;
             goto fail_gpio;
@@ -120,14 +120,14 @@ static int keyio_init(struct keyinput_dev *dev)
     /* A_3 Initial IO */
     for(i = 0;i < KEY_NUM;i++)/* Uss for loop Because we might have muiltiple Device */
     {
-        memset(dev -> irqkey[1].name, 0, sizeof(dev->irqkey[1].name));
+        memset(dev -> irqkey[i].name, 0, sizeof(dev->irqkey[i].name));
         sprintf(dev->irqkey[i].name, "KEY%d", i);
 
-        ret = gpio_request(dev -> irqkey[1].gpio, dev->irqkey[i].name);
+        ret = gpio_request(dev -> irqkey[i].gpio, dev->irqkey[i].name);
         if(ret)
         {
             ret = -EINVAL;
-            printk("IO %d cannot request~\r\n", dev -> irqkey[1].gpio);
+            printk("IO %d cannot request~\r\n", dev -> irqkey[i].gpio);
             goto fail_request;
         }
         gpio_direction_input(dev->irqkey[i].gpio); /* Set Pin as Input */
@@ -139,7 +139,7 @@ static int keyio_init(struct keyinput_dev *dev)
         }
 
         /* 1. Get IRQ Number */
-        dev->irqkey[1].irqnum = gpio_to_irq(dev->irqkey[i].gpio); /* Get IRQ Number */
+        dev->irqkey[i].irqnum = gpio_to_irq(dev->irqkey[i].gpio); /* Get IRQ Number */
 #if 0
         dev->irqkey[i].irqnum = irq_of_parse_and_map(dev->nd, i);
 #endif
