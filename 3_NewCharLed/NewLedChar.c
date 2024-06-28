@@ -121,8 +121,8 @@ static int __init newchrled_init(void)
     val |= (3 << 26);                           /* Set bit[26:27] */
     writel(val, IMX6U_CCM_CCGR1);
 
-    writel(0x5, SW_MUX_GPIO1_IO03_BASE);        /* Configured GPIO io03 */
-    writel(0x10B0, SW_PAD_GPIO1_IO03_BASE);     /* Set Electronical Property */
+    writel(0x5, SW_MUX_GPIO1_IO03);        /* Configured GPIO io03 */
+    writel(0x10B0, SW_PAD_GPIO1_IO03);     /* Set Electronical Property */
 
     val = readl(GPIO1_GDIR);                    
     val |= (1 << 3);                            /* Set bit 3 = 1,Set as GPIO Output */
@@ -212,11 +212,11 @@ static void __exit newchrled_exit(void)
     writel(val, GPIO1_DR);
 
     /* 1.Cancel Memory Mapping */
-    iounmap(CCM_CCGR1_BASE);
-    iounmap(SW_MUX_GPIO1_IO03_BASE);
-    iounmap(SW_PAD_GPIO1_IO03_BASE);
-    iounmap(GPIO1_GDIR_BASE);
-    iounmap(GPIO1_DR_BASE);    
+    iounmap(IMX6U_CCM_CCGR1);
+    iounmap(SW_MUX_GPIO1_IO03);
+    iounmap(SW_PAD_GPIO1_IO03);
+    iounmap(GPIO1_GDIR);
+    iounmap(GPIO1_DR);    
 
     /* 2.Delete Char Device */
     cdev_del(&newchrled.cdev);

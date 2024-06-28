@@ -137,7 +137,7 @@ static void __exit led_exit(void)
 
 
     /* Cancel Memory Mapping */
-    iounmap(CCM_CCGR1_BASE);
+    iounmap(IMX6U_CCM_CCGR1);
     iounmap(SW_MUX_GPIO1_IO03);
     iounmap(SW_PAD_GPIO1_IO03);
     iounmap(GPIO1_GDIR);
