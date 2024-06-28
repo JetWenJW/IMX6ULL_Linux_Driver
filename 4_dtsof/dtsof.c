@@ -55,7 +55,7 @@ static int __init dtsof_init(void)
     }
 
     /* 1.3 Read Number Property */
-    ret = of_property_read_u32(bl_nd, "default-brightness-level", &str );
+    ret = of_property_read_u32(bl_nd, "default-brightness-level", (u32 *)(&str) );
     if(ret < 0)
     {
         goto fail_read32;
